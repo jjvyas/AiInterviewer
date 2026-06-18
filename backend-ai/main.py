@@ -431,6 +431,10 @@ async def analyze_resume(req: ResumeAnalyzeRequest):
     else:
         original_text = req.fileContent or ""
 
+    logger.info(f"Extracted {len(original_text)} characters from file '{req.fileName}'.")
+    if original_text:
+        logger.info(f"Extracted Preview: {original_text[:200]}")
+
     fallback_profile = """# Alex Mercer
 **Email:** alex.mercer@devmail.com | **GitHub:** github.com/alexmercer | **Location:** San Francisco, CA
 
@@ -543,7 +547,7 @@ Results-driven Senior Systems Developer with 6+ years of experience specializing
 
     # Fallbacks if Gemini is not enabled or fails
     if not structured_profile:
-        if len(original_text) > 150 and original_text != fallback_profile:
+        if original_text and original_text != fallback_profile and len(original_text.strip()) > 10:
             structured_profile = original_text
         else:
             structured_profile = fallback_profile
