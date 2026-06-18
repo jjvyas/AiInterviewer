@@ -21,6 +21,7 @@ class InterviewState {
   final List<Map<String, dynamic>> pastInterviews;
   final bool isDarkMode;
   final sb.User? currentUser;
+  final int currentDifficulty;
   
   // Resume Labs states
   final String? originalResumeText;
@@ -44,6 +45,7 @@ class InterviewState {
     this.pastInterviews = const [],
     this.isDarkMode = true, // Default to true (sleek dark mode from image)
     this.currentUser,
+    this.currentDifficulty = 2,
     this.originalResumeText,
     this.enhancedPhrasing = const {},
     this.gapAnalysisReport,
@@ -66,6 +68,7 @@ class InterviewState {
     List<Map<String, dynamic>>? pastInterviews,
     bool? isDarkMode,
     sb.User? currentUser,
+    int? currentDifficulty,
     String? originalResumeText,
     Map<String, String>? enhancedPhrasing,
     String? gapAnalysisReport,
@@ -87,6 +90,7 @@ class InterviewState {
       pastInterviews: pastInterviews ?? this.pastInterviews,
       isDarkMode: isDarkMode ?? this.isDarkMode,
       currentUser: currentUser ?? this.currentUser,
+      currentDifficulty: currentDifficulty ?? this.currentDifficulty,
       originalResumeText: originalResumeText ?? this.originalResumeText,
       enhancedPhrasing: enhancedPhrasing ?? this.enhancedPhrasing,
       gapAnalysisReport: gapAnalysisReport ?? this.gapAnalysisReport,
@@ -308,11 +312,13 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
       );
 
       final question = startRes.data['question'] ?? 'Welcome! Let us start by explaining your engineering background.';
+      final difficulty = (startRes.data['difficulty'] ?? 2) as int;
 
       state = state.copyWith(
         activeInterviewId: interviewId,
         currentStep: 1,
         currentQuestion: question,
+        currentDifficulty: difficulty,
         stepsHistory: [
           {'question': question, 'answer': null, 'score': null}
         ],
@@ -356,7 +362,7 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
           'interview_id': state.activeInterviewId,
           'user_answer': answer,
           'step_order': state.currentStep,
-          'current_difficulty': 2, // default / calculated
+          'current_difficulty': state.currentDifficulty,
           'domain': state.domain,
           'experience_tier': state.experienceTier,
           'resume_context': state.originalResumeText,
@@ -393,12 +399,14 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
       } else {
         // Prepare next step
         final nextQuestion = data['next_question'] ?? 'Tell me more.';
+        final nextDifficulty = (data['next_difficulty'] ?? state.currentDifficulty) as int;
         updatedHistory.add({'question': nextQuestion, 'answer': null, 'score': null});
 
         state = state.copyWith(
           stepsHistory: updatedHistory,
           currentStep: state.currentStep + 1,
           currentQuestion: nextQuestion,
+          currentDifficulty: nextDifficulty,
           isLoading: false,
         );
 
@@ -413,6 +421,13 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
       if (updatedHistory.isNotEmpty) {
         updatedHistory.last['answer'] = answer;
         updatedHistory.last['score'] = localScore;
+      }
+
+      int nextDifficulty = state.currentDifficulty;
+      if (localScore >= 0.8) {
+        nextDifficulty = (state.currentDifficulty + 1).clamp(1, 5);
+      } else if (localScore <= 0.4) {
+        nextDifficulty = (state.currentDifficulty - 1).clamp(1, 5);
       }
 
       if (state.currentStep < 5) {
@@ -430,6 +445,7 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
           stepsHistory: updatedHistory,
           currentStep: state.currentStep + 1,
           currentQuestion: nextQ,
+          currentDifficulty: nextDifficulty,
           isLoading: false,
         );
         startTimer();
@@ -483,6 +499,7 @@ ${updatedHistory.asMap().entries.map((entry) {
           overallScore: calculatedOverallScore,
           reportMarkdown: mockReport,
           currentView: 'evaluation',
+          currentDifficulty: nextDifficulty,
           isLoading: false,
         );
       }
