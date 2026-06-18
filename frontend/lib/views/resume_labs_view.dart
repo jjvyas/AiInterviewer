@@ -178,9 +178,9 @@ class _ResumeLabsViewState extends ConsumerState<ResumeLabsView> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppTheme.textDark, width: 1.5),
-        borderRadius: BorderRadius.circular(12),
+        color: AppTheme.cardBg,
+        border: Border.all(color: AppTheme.borderColor, width: 1.2),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,9 +198,9 @@ class _ResumeLabsViewState extends ConsumerState<ResumeLabsView> {
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.panelBg.withValues(alpha: 0.3),
-                border: Border.all(color: AppTheme.textDark, width: 1),
-                borderRadius: BorderRadius.circular(8),
+                color: AppTheme.panelBg,
+                border: Border.all(color: AppTheme.borderColor, width: 1.0),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,11 +210,17 @@ class _ResumeLabsViewState extends ConsumerState<ResumeLabsView> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
-                      color: Colors.grey.shade700,
+                      color: AppTheme.textDark.withValues(alpha: 0.6),
                     ),
                   ),
-                  Text(entry.key, style: const TextStyle(fontSize: 13)),
-                  const SizedBox(height: 8),
+                  Text(
+                    entry.key,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textDark.withValues(alpha: 0.95),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   Text(
                     "AI suggestion:",
                     style: TextStyle(
@@ -225,9 +231,10 @@ class _ResumeLabsViewState extends ConsumerState<ResumeLabsView> {
                   ),
                   Text(
                     entry.value,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
+                      color: AppTheme.textDark,
                     ),
                   ),
                 ],
@@ -243,9 +250,9 @@ class _ResumeLabsViewState extends ConsumerState<ResumeLabsView> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppTheme.textDark, width: 1.5),
-        borderRadius: BorderRadius.circular(12),
+        color: AppTheme.cardBg,
+        border: Border.all(color: AppTheme.borderColor, width: 1.2),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,7 +270,7 @@ class _ResumeLabsViewState extends ConsumerState<ResumeLabsView> {
             styleSheet: MarkdownStyleSheet(
               h1: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark, height: 1.5),
               h2: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.accentHighlight, height: 1.4),
-              p: const TextStyle(fontSize: 13, height: 1.4),
+              p: TextStyle(fontSize: 13, height: 1.4, color: AppTheme.textDark.withValues(alpha: 0.95)),
               listBullet: TextStyle(color: AppTheme.accentHighlight),
             ),
           ),
