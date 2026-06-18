@@ -30,15 +30,33 @@ const requireAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Dev Mode: Missing or invalid Bearer token. Bypassing auth with mock user.');
+        req.user = { id: '00000000-0000-0000-0000-000000000000', email: 'mockuser@example.com' };
+        return next();
+      }
       return res.status(401).json({ error: 'Unauthorized: Missing or invalid token format' });
     }
 
     const token = authHeader.split(' ')[1];
     
     // In production, validate token against Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    let user = null;
+    let authError = null;
+    try {
+      const { data, error } = await supabase.auth.getUser(token);
+      user = data?.user;
+      authError = error;
+    } catch (err) {
+      authError = err;
+    }
     
-    if (error || !user) {
+    if (authError || !user) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Dev Mode: Supabase token verification failed. Bypassing auth with mock user.', authError);
+        req.user = { id: '00000000-0000-0000-0000-000000000000', email: 'mockuser@example.com' };
+        return next();
+      }
       return res.status(401).json({ error: 'Unauthorized: Invalid token' });
     }
 
@@ -46,6 +64,11 @@ const requireAuth = async (req, res, next) => {
     next();
   } catch (err) {
     console.error('Auth middleware error:', err);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Dev Mode: Exception in auth middleware. Bypassing auth with mock user.');
+      req.user = { id: '00000000-0000-0000-0000-000000000000', email: 'mockuser@example.com' };
+      return next();
+    }
     res.status(500).json({ error: 'Internal server error during auth verification' });
   }
 };
@@ -83,6 +106,22 @@ app.post('/api/interviews/session', requireAuth, async (req, res) => {
 
     if (error) {
       console.error('Supabase error inserting interview:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Dev Mode: Supabase insertion failed. Returning mock interview session.');
+        const mockInterview = {
+          id: require('crypto').randomUUID ? require('crypto').randomUUID() : '00000000-0000-0000-0000-000000000000',
+          user_id: req.user.id,
+          domain: domain,
+          experience_tier: experienceTier,
+          current_step: 1,
+          resume_context: resumeContext || null,
+          created_at: new Date().toISOString()
+        };
+        return res.status(201).json({
+          message: 'Interview session created successfully (Dev Mock)',
+          interview: mockInterview
+        });
+      }
       return res.status(500).json({ error: 'Failed to initialize session in database' });
     }
 
@@ -92,6 +131,22 @@ app.post('/api/interviews/session', requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('Failed to create session:', err);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Dev Mode: Exception in session creation. Returning mock interview session.');
+      const mockInterview = {
+        id: require('crypto').randomUUID ? require('crypto').randomUUID() : '00000000-0000-0000-0000-000000000000',
+        user_id: req.user.id,
+        domain: domain,
+        experience_tier: experienceTier,
+        current_step: 1,
+        resume_context: resumeContext || null,
+        created_at: new Date().toISOString()
+      };
+      return res.status(201).json({
+        message: 'Interview session created successfully (Dev Mock)',
+        interview: mockInterview
+      });
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 });

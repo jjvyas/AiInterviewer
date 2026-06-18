@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme.dart';
 import 'providers/interview_provider.dart';
+import 'services/local_storage.dart';
 
 // Import Views
 import 'views/dashboard_view.dart';
@@ -16,22 +17,27 @@ import 'views/resume_labs_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  // Initialize Hive for local interview history persistence
+  await HiveStorage.init();
+
   // Safe Supabase initialization for mock/production configuration
   try {
     await Supabase.initialize(
-      url: const String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://yfzmdwusatnmgslvpsqg.supabase.co'),
-      publishableKey: const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'sb_publishable_IFAJdiG9yUTuG0q8m5B-8g_lmZelLuj'),
+      url: const String.fromEnvironment(
+        'SUPABASE_URL',
+        defaultValue: 'https://yfzmdwusatnmgslvpsqg.supabase.co',
+      ),
+      publishableKey: const String.fromEnvironment(
+        'SUPABASE_ANON_KEY',
+        defaultValue: 'sb_publishable_IFAJdiG9yUTuG0q8m5B-8g_lmZelLuj',
+      ),
     );
   } catch (e) {
     debugPrint('Supabase initialize graceful fallback: $e');
   }
 
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends ConsumerWidget {
@@ -47,13 +53,237 @@ class MyApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: state.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
-      home: state.currentUser == null ? const LoginView() : const MainShellLayout(),
+      home: (state.currentUser == null && !state.isDemoMode)
+          ? const LoginView()
+          : const MainShellLayout(),
     );
   }
 }
 
 class MainShellLayout extends ConsumerWidget {
   const MainShellLayout({super.key});
+
+  Widget _buildSidebarContent(
+    BuildContext context,
+    InterviewState state,
+    InterviewNotifier notifier,
+  ) {
+    final bool isSessionActive =
+        state.activeInterviewId != null && state.currentStep < 7;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Top Brand Section
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+          color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.terminal,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    "InterviewerAI",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Elite Prep Coach",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        Divider(
+          height: 1,
+          color: state.isDarkMode
+              ? const Color(0xFF2D2D34)
+              : const Color(0xFFD2D7DF),
+          thickness: 1.5,
+        ),
+
+        // Navigation menu items
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            children: [
+              _buildSidebarItem(
+                context: context,
+                title: "Dashboard Overview",
+                icon: Icons.dashboard,
+                viewKey: 'dashboard',
+                currentView: state.currentView,
+                isDisabled: isSessionActive,
+                onTap: () {
+                  notifier.setView('dashboard');
+                  if (MediaQuery.of(context).size.width < 800) {
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+              _buildSidebarItem(
+                context: context,
+                title: "Setup Mock Interview",
+                icon: Icons.settings_suggest,
+                viewKey: 'setup',
+                currentView: state.currentView,
+                isDisabled: isSessionActive,
+                onTap: () {
+                  notifier.setView('setup');
+                  if (MediaQuery.of(context).size.width < 800) {
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+              _buildSidebarItem(
+                context: context,
+                title: "Active Terminal",
+                icon: Icons.computer,
+                viewKey: 'terminal',
+                currentView: state.currentView,
+                isDisabled:
+                    state.activeInterviewId == null || state.currentStep >= 7,
+                onTap: () {
+                  notifier.setView('terminal');
+                  if (MediaQuery.of(context).size.width < 800) {
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+              _buildSidebarItem(
+                context: context,
+                title: "Resume Labs",
+                icon: Icons.work,
+                viewKey: 'resume_labs',
+                currentView: state.currentView,
+                isDisabled: isSessionActive,
+                onTap: () {
+                  notifier.setView('resume_labs');
+                  if (MediaQuery.of(context).size.width < 800) {
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+              _buildSidebarItem(
+                context: context,
+                title: "Profile & History Ledger",
+                icon: Icons.person,
+                viewKey: 'profile',
+                currentView: state.currentView,
+                isDisabled: isSessionActive,
+                onTap: () {
+                  notifier.setView('profile');
+                  if (MediaQuery.of(context).size.width < 800) {
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+              _buildSidebarItem(
+                context: context,
+                title: state.isDarkMode ? "Light Mode" : "Dark Mode",
+                icon: state.isDarkMode
+                    ? Icons.wb_sunny
+                    : Icons.nightlight_round,
+                viewKey: 'theme_toggle',
+                currentView: '',
+                onTap: () => notifier.toggleTheme(),
+              ),
+              _buildSidebarItem(
+                context: context,
+                title: "Sign Out",
+                icon: Icons.logout,
+                viewKey: 'logout',
+                currentView: '',
+                onTap: () {
+                  if (MediaQuery.of(context).size.width < 800) {
+                    Navigator.pop(context);
+                  }
+                  _showSignOutConfirmation(context, state, notifier);
+                },
+              ),
+            ],
+          ),
+        ),
+
+        Divider(
+          height: 1,
+          color: state.isDarkMode
+              ? const Color(0xFF2D2D34)
+              : const Color(0xFFD2D7DF),
+          thickness: 1.5,
+        ),
+
+        // Bottom Session Status Card
+        Container(
+          padding: const EdgeInsets.all(20),
+          color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: state.isDemoMode
+                    ? Colors.orangeAccent.withValues(alpha: 0.8)
+                    : Theme.of(context).colorScheme.primary,
+                child: Icon(
+                  state.isDemoMode
+                      ? Icons.science_outlined
+                      : Icons.cloud_done_outlined,
+                  size: 16,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      state.isDemoMode ? "Demo Mode Active" : "Online Mode",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    Text(
+                      state.isDemoMode
+                          ? "Client offline sync active"
+                          : "AI cloud sync active",
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -62,33 +292,77 @@ class MainShellLayout extends ConsumerWidget {
 
     // Map currentView string to actual view Widget
     Widget activeViewWidget;
+    String viewTitle = 'Dashboard';
     switch (state.currentView) {
       case 'dashboard':
         activeViewWidget = const DashboardView();
+        viewTitle = 'Dashboard Overview';
         break;
       case 'setup':
         activeViewWidget = const SetupView();
+        viewTitle = 'Setup Mock Interview';
         break;
       case 'terminal':
         activeViewWidget = const TerminalView();
+        viewTitle = 'Active Terminal';
         break;
       case 'evaluation':
         activeViewWidget = const EvaluationView();
+        viewTitle = 'Evaluation Report';
         break;
       case 'profile':
         activeViewWidget = const ProfileView();
+        viewTitle = 'Profile & History Ledger';
         break;
       case 'resume_labs':
         activeViewWidget = const ResumeLabsView();
+        viewTitle = 'Resume Labs';
         break;
       default:
         activeViewWidget = const DashboardView();
+        viewTitle = 'Dashboard';
     }
 
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 800;
+
     return Scaffold(
+      appBar: isMobile
+          ? AppBar(
+              title: Text(
+                viewTitle,
+                style: TextStyle(
+                  color: state.isDarkMode ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              backgroundColor: state.isDarkMode
+                  ? const Color(0xFF09090C)
+                  : const Color(0xFFF1F5F9),
+              elevation: 0,
+              iconTheme: IconThemeData(
+                color: state.isDarkMode ? Colors.white : Colors.black87,
+              ),
+            )
+          : null,
+      drawer: isMobile
+          ? Drawer(
+              child: Container(
+                color: state.isDarkMode
+                    ? const Color(0xFF09090C)
+                    : const Color(0xFFF1F5F9),
+                child: SafeArea(
+                  child: _buildSidebarContent(context, state, notifier),
+                ),
+              ),
+            )
+          : null,
       body: Container(
         decoration: BoxDecoration(
-          color: state.isDarkMode ? const Color(0xFF09090C) : const Color(0xFFF1F5F9),
+          color: state.isDarkMode
+              ? const Color(0xFF09090C)
+              : const Color(0xFFF1F5F9),
           gradient: state.isDarkMode
               ? const RadialGradient(
                   center: Alignment.center,
@@ -103,178 +377,35 @@ class MainShellLayout extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            // Fixed Left Navigation Sidebar wrapped in glass blur
-            ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                child: Container(
-                  width: 260,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    border: Border(
-                      right: BorderSide(
-                        color: state.isDarkMode 
-                            ? const Color(0xFF2D2D34).withValues(alpha: 0.5) 
-                            : const Color(0xFFD2D7DF).withValues(alpha: 0.5), 
-                        width: 1.5,
+            if (!isMobile)
+              // Fixed Left Navigation Sidebar wrapped in glass blur
+              ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                  child: Container(
+                    width: 260,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      border: Border(
+                        right: BorderSide(
+                          color: state.isDarkMode
+                              ? const Color(0xFF2D2D34).withValues(alpha: 0.5)
+                              : const Color(0xFFD2D7DF).withValues(alpha: 0.5),
+                          width: 1.5,
+                        ),
                       ),
                     ),
-                  ),
-                  child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Top Brand Section
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-                  color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.5),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.terminal, color: Theme.of(context).colorScheme.primary, size: 28),
-                          const SizedBox(width: 8),
-                          Text(
-                            "InterviewerAI",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Elite Prep Coach",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ],
+                    child: _buildSidebarContent(context, state, notifier),
                   ),
                 ),
-                
-                Divider(height: 1, color: state.isDarkMode ? const Color(0xFF2D2D34) : const Color(0xFFD2D7DF), thickness: 1.5),
-                
-                // Navigation menu items
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    children: [
-                      _buildSidebarItem(
-                        context: context,
-                        title: "Dashboard Overview",
-                        icon: Icons.dashboard,
-                        viewKey: 'dashboard',
-                        currentView: state.currentView,
-                        onTap: () => notifier.setView('dashboard'),
-                      ),
-                      _buildSidebarItem(
-                        context: context,
-                        title: "Setup Mock Interview",
-                        icon: Icons.settings_suggest,
-                        viewKey: 'setup',
-                        currentView: state.currentView,
-                        onTap: () => notifier.setView('setup'),
-                      ),
-                      _buildSidebarItem(
-                        context: context,
-                        title: "Active Terminal",
-                        icon: Icons.computer,
-                        viewKey: 'terminal',
-                        currentView: state.currentView,
-                        isDisabled: state.activeInterviewId == null,
-                        onTap: () => notifier.setView('terminal'),
-                      ),
-                      _buildSidebarItem(
-                        context: context,
-                        title: "Resume Labs",
-                        icon: Icons.work,
-                        viewKey: 'resume_labs',
-                        currentView: state.currentView,
-                        onTap: () => notifier.setView('resume_labs'),
-                      ),
-                      _buildSidebarItem(
-                        context: context,
-                        title: "Profile & History Ledger",
-                        icon: Icons.person,
-                        viewKey: 'profile',
-                        currentView: state.currentView,
-                        onTap: () => notifier.setView('profile'),
-                      ),
-                      _buildSidebarItem(
-                        context: context,
-                        title: state.isDarkMode ? "Light Mode" : "Dark Mode",
-                        icon: state.isDarkMode ? Icons.wb_sunny : Icons.nightlight_round,
-                        viewKey: 'theme_toggle',
-                        currentView: '',
-                        onTap: () => notifier.toggleTheme(),
-                      ),
-                      _buildSidebarItem(
-                        context: context,
-                        title: "Sign Out",
-                        icon: Icons.logout,
-                        viewKey: 'logout',
-                        currentView: '',
-                        onTap: () => notifier.logout(),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                Divider(height: 1, color: state.isDarkMode ? const Color(0xFF2D2D34) : const Color(0xFFD2D7DF), thickness: 1.5),
-
-                 // Bottom Session Status Card
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        child: const Icon(Icons.code, size: 16, color: Colors.white),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Dev Mode Active",
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            Text(
-                              "Client offline sync active",
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+              ),
 
             // Main View Panel wrapped in glass blur
             Expanded(
               child: ClipRect(
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
-                  child: activeViewWidget,
+                  child: SafeArea(top: !isMobile, child: activeViewWidget),
                 ),
               ),
             ),
@@ -297,30 +428,120 @@ class MainShellLayout extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-      child: ListTile(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: isSelected
-              ? BorderSide(color: Theme.of(context).colorScheme.onSurface, width: 1.5)
-              : BorderSide.none,
-        ),
-        tileColor: isSelected ? Theme.of(context).colorScheme.secondary : Colors.transparent,
-        leading: Icon(
-          icon,
-          color: isDisabled
-              ? Colors.grey.shade400
-              : (isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isDisabled ? Colors.grey.shade400 : Theme.of(context).colorScheme.onSurface,
+      child: Material(
+        color: Colors.transparent,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        child: ListTile(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: isSelected
+                ? BorderSide(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    width: 1.5,
+                  )
+                : BorderSide.none,
           ),
+          tileColor: isSelected
+              ? Theme.of(context).colorScheme.secondary
+              : Colors.transparent,
+          leading: Icon(
+            icon,
+            color: isDisabled
+                ? Colors.grey.shade400
+                : (isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.onSurface),
+          ),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isDisabled
+                  ? Colors.grey.shade400
+                  : Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          enabled: !isDisabled,
+          onTap: onTap,
         ),
-        enabled: !isDisabled,
-        onTap: onTap,
       ),
+    );
+  }
+
+  void _showSignOutConfirmation(
+    BuildContext context,
+    InterviewState state,
+    InterviewNotifier notifier,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: state.isDarkMode
+              ? const Color(0xFF13131A)
+              : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: state.isDarkMode
+                  ? const Color(0xFF2D2D34).withValues(alpha: 0.5)
+                  : const Color(0xFFD2D7DF).withValues(alpha: 0.5),
+              width: 1.5,
+            ),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+              const SizedBox(width: 10),
+              Text(
+                "Sign Out",
+                style: TextStyle(
+                  color: state.isDarkMode ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            state.isDemoMode
+                ? "Are you sure you want to sign out of Demo Mode? Any local mock interview history completed during this session will be lost."
+                : "Are you sure you want to sign out of your account?",
+            style: TextStyle(
+              color: state.isDarkMode
+                  ? Colors.white.withValues(alpha: 0.8)
+                  : Colors.black54,
+              fontSize: 14,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                "Cancel",
+                style: TextStyle(
+                  color: state.isDarkMode ? Colors.white60 : Colors.black45,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                notifier.logout();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text("Sign Out"),
+            ),
+          ],
+        );
+      },
     );
   }
 }

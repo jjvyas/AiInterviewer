@@ -34,6 +34,12 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
 
     final isTimerLow = state.timeLeft < 120; // less than 2 mins left
 
+    final Color sandboxBg = state.isDarkMode ? const Color(0xFF1E1E2E) : const Color(0xFFF8F9FA);
+    final Color sandboxText = state.isDarkMode ? const Color(0xFFC0CAF5) : const Color(0xFF1E1E24);
+    final Color sandboxHeaderTextColor = state.isDarkMode ? Colors.white : AppTheme.textDark;
+    final Color sandboxBarBg = state.isDarkMode ? const Color(0xFF161622) : const Color(0xFFE9ECEF);
+    final Color sandboxIconColor = state.isDarkMode ? Colors.white : AppTheme.accentHighlight;
+
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -63,7 +69,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isTimerLow ? Colors.red.shade100 : Colors.white.withValues(alpha: 0.5),
+                  color: isTimerLow ? Colors.red.withValues(alpha: 0.2) : AppTheme.cardBg,
                   border: Border.all(
                     color: isTimerLow ? Colors.red : AppTheme.textDark,
                     width: 1.5,
@@ -141,7 +147,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: isLast ? AppTheme.cardBg : Colors.white.withValues(alpha: 0.5),
+                                      color: isLast ? AppTheme.cardBg : AppTheme.panelBg,
                                       border: Border.all(color: AppTheme.textDark, width: 1.2),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -150,12 +156,12 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                                       children: [
                                         Text(
                                           "Question ${index + 1}:",
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textDark),
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
                                           step['question'] ?? '',
-                                          style: const TextStyle(fontSize: 14),
+                                          style: TextStyle(fontSize: 14, color: AppTheme.textDark.withValues(alpha: 0.9)),
                                         ),
                                       ],
                                     ),
@@ -170,19 +176,22 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                                         padding: const EdgeInsets.all(12),
                                         margin: const EdgeInsets.only(left: 32),
                                         decoration: BoxDecoration(
-                                          color: Colors.white,
+                                          color: AppTheme.cardBg,
                                           border: Border.all(color: AppTheme.textDark, width: 1.2),
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
-                                            const Text(
+                                            Text(
                                               "Your Answer:",
-                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textDark),
                                             ),
                                             const SizedBox(height: 4),
-                                            Text(step['answer']),
+                                            Text(
+                                              step['answer'],
+                                              style: TextStyle(color: AppTheme.textDark.withValues(alpha: 0.9)),
+                                            ),
                                             if (step['score'] != null) ...[
                                               const SizedBox(height: 6),
                                               Text(
@@ -216,7 +225,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                   flex: 1,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E2E), // Dark terminal bg
+                      color: sandboxBg,
                       border: Border.all(color: AppTheme.textDark, width: 1.5),
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -235,10 +244,10 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Row(
-                                children: const [
-                                  Icon(Icons.code, size: 20, color: Colors.white),
-                                  SizedBox(width: 8),
-                                  Text("Candidate Answer Sandbox", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                children: [
+                                  Icon(Icons.code, size: 20, color: sandboxIconColor),
+                                  const SizedBox(width: 8),
+                                  Text("Candidate Answer Sandbox", style: TextStyle(color: sandboxHeaderTextColor, fontWeight: FontWeight.bold)),
                                 ],
                               ),
                               const Text(
@@ -257,9 +266,9 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                               controller: _answerController,
                               maxLines: null,
                               minLines: 20,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'Courier',
-                                color: Color(0xFFC0CAF5), // Soft terminal white
+                                color: sandboxText,
                                 fontSize: 14,
                                 height: 1.4,
                               ),
@@ -279,9 +288,9 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                         // Action Buttons Bar
                         Container(
                           padding: const EdgeInsets.all(16),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF161622),
-                            borderRadius: BorderRadius.only(
+                          decoration: BoxDecoration(
+                            color: sandboxBarBg,
+                            borderRadius: const BorderRadius.only(
                               bottomLeft: Radius.circular(12),
                               bottomRight: Radius.circular(12),
                             ),

@@ -82,7 +82,7 @@ Please complete a mock interview session first.""";
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppTheme.cardBg,
                 border: Border.all(color: AppTheme.textDark, width: 1.5),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -91,12 +91,12 @@ Please complete a mock interview session first.""";
                 styleSheet: MarkdownStyleSheet(
                   h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.accentHighlight, height: 1.6),
                   h2: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark, height: 1.5),
-                  p: const TextStyle(fontSize: 14, height: 1.5),
-                  tableHead: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  p: TextStyle(fontSize: 14, height: 1.5, color: AppTheme.textDark),
+                  tableHead: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textDark),
                   tableHeadAlign: TextAlign.center,
                   tableBorder: TableBorder.all(color: AppTheme.textDark, width: 1),
                   tableCellsPadding: const EdgeInsets.all(8),
-                  tableBody: const TextStyle(fontSize: 13),
+                  tableBody: TextStyle(fontSize: 13, color: AppTheme.textDark),
                   listBullet: TextStyle(color: AppTheme.accentHighlight),
                 ),
               ),

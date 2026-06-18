@@ -228,7 +228,7 @@ class _ResumeLabsViewState extends ConsumerState<ResumeLabsView> {
                           child: Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: AppTheme.cardBg,
                               border: Border.all(color: AppTheme.textDark, width: 1.5),
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -260,7 +260,7 @@ class _ResumeLabsViewState extends ConsumerState<ResumeLabsView> {
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12,
-                                            color: Colors.grey.shade700,
+                                            color: state.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
                                           ),
                                         ),
                                         Text(entry.key, style: const TextStyle(fontSize: 13)),
@@ -296,7 +296,7 @@ class _ResumeLabsViewState extends ConsumerState<ResumeLabsView> {
                           child: Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: AppTheme.cardBg,
                               border: Border.all(color: AppTheme.textDark, width: 1.5),
                               borderRadius: BorderRadius.circular(12),
                             ),

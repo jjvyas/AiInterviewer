@@ -156,7 +156,7 @@ class ProfileView extends ConsumerWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: state.isDarkMode ? AppTheme.cardBg : Colors.white,
                                   border: Border.all(color: AppTheme.textDark, width: 1.2),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
