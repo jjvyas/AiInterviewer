@@ -13,6 +13,13 @@ class ProfileView extends ConsumerStatefulWidget {
 
 class _ProfileViewState extends ConsumerState<ProfileView> {
   int _activeTab = 0; // 0 for History, 1 for Resume Profile
+  final ScrollController _resumeScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _resumeScrollController.dispose();
+    super.dispose();
+  }
 
   String _formatDate(String isoString) {
     try {
@@ -293,23 +300,26 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
         const SizedBox(height: 12),
         Container(
           width: double.infinity,
-          height: 180,
-          padding: const EdgeInsets.all(16),
+          height: 250,
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: AppTheme.panelBg,
             border: Border.all(color: AppTheme.borderColor, width: 1.2),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Scrollbar(
+            controller: _resumeScrollController,
             thumbVisibility: true,
             child: SingleChildScrollView(
-              child: Text(
-                state.originalResumeText!,
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                  color: AppTheme.textDark.withValues(alpha: 0.85),
-                  height: 1.4,
+              controller: _resumeScrollController,
+              child: MarkdownBody(
+                data: state.originalResumeText!,
+                styleSheet: MarkdownStyleSheet(
+                  h1: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark, height: 1.4),
+                  h2: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.accentHighlight, height: 1.3),
+                  h3: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textDark, height: 1.2),
+                  p: TextStyle(fontSize: 12.5, height: 1.45, color: AppTheme.textDark.withValues(alpha: 0.9)),
+                  listBullet: TextStyle(color: AppTheme.accentHighlight),
                 ),
               ),
             ),

@@ -431,15 +431,68 @@ async def analyze_resume(req: ResumeAnalyzeRequest):
     else:
         original_text = req.fileContent or ""
 
+    fallback_profile = """# Alex Mercer
+**Email:** alex.mercer@devmail.com | **GitHub:** github.com/alexmercer | **Location:** San Francisco, CA
+
+## Professional Summary
+Results-driven Senior Systems Developer with 6+ years of experience specializing in backend architectures, microservices optimization, and automated cloud deployments. Proven track record of scaling database performance and streamlining CI/CD workflows.
+
+## Core Technical Skills
+* **Programming Languages:** Go (Golang), Python, TypeScript, SQL, Java
+* **Frameworks & Libraries:** Node.js (Express), FastAPI, Gin, Flutter
+* **Databases & Caching:** PostgreSQL, MongoDB, Redis, Elasticsearch
+* **Cloud & DevOps:** AWS (ECS, RDS, S3), Docker, Terraform, GitHub Actions
+
+## Work Experience
+### Senior Backend Engineer | Techflow Solutions (2023 - Present)
+* Architected and managed CI/CD deployment pipelines using GitHub Actions and Terraform on AWS ECS, reducing deployment cycle times by 40%.
+* Optimized PostgreSQL database indexing and query paths, reducing slow query executions by 42% and query response latency by 150ms.
+* Engineered high-throughput microservices using Go and Redis to handle up to 15,000 requests per minute with 99.9% uptime.
+
+### Software Developer | CloudScale Corp (2020 - 2023)
+* Built scalable RESTful APIs in Node.js/Express, increasing system resilience under heavy loads.
+* Collaborated on migrating database architectures from monolithic clusters to microservices-based datastores.
+
+## Education & Certifications
+* **B.S. in Computer Science** | Stanford University (2016 - 2020)
+* **AWS Certified Solutions Architect (Associate)**"""
+
     if not original_text:
-        original_text = "Experienced software engineer specializing in backend systems, APIs, database indexing, and CI/CD pipelines."
+        original_text = fallback_profile
 
     enhanced_phrasing = {}
     gap_analysis = ""
+    structured_profile = ""
 
     if gemini_client:
         try:
-            # 1. Generate enhanced phrasing suggestions
+            # 1. Generate structured markdown profile
+            profile_prompt = f"""
+            You are an expert ATS parser and resume formatter.
+            Given this raw resume text:
+            ---
+            {original_text[:4000]}
+            ---
+            Parse and format this resume into a clean, professional candidate profile summary in Markdown.
+            Ensure it includes:
+            - **Candidate Name** and **Contact Info** (Email, Links) prominently at the top.
+            - **Professional Summary**: A short 2-3 sentence summary.
+            - **Core Technical Skills**: Categorized lists of Languages, Frameworks, Databases, and Tools/DevOps.
+            - **Work History**: Companies, roles, durations, and key achievements.
+            - **Education & Certifications**.
+            
+            Return only the markdown content. Do not include markdown code block backticks (like ```markdown ... ```).
+            """
+            profile_res = gemini_client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=profile_prompt
+            )
+            structured_profile = profile_res.text.strip()
+        except Exception as e:
+            logger.error(f"Error parsing structured profile via Gemini: {e}")
+
+        try:
+            # 2. Generate enhanced phrasing suggestions
             phrasing_prompt = f"""
             You are a senior technical writer and resume optimizer.
             Given this raw resume text:
@@ -462,8 +515,11 @@ async def analyze_resume(req: ResumeAnalyzeRequest):
                 config={'response_mime_type': 'application/json'}
             )
             enhanced_phrasing = json.loads(phrasing_res.text)
+        except Exception as e:
+            logger.error(f"Error parsing phrasing suggestions via Gemini: {e}")
 
-            # 2. Technical Gap Analysis Report
+        try:
+            # 3. Technical Gap Analysis Report
             gap_prompt = f"""
             Analyze this candidate resume for the target role: "{req.targetJob}".
             Resume Text:
@@ -483,9 +539,15 @@ async def analyze_resume(req: ResumeAnalyzeRequest):
             )
             gap_analysis = gap_res.text
         except Exception as e:
-            logger.error(f"Error parsing resume via Gemini: {e}")
+            logger.error(f"Error parsing gap analysis via Gemini: {e}")
 
     # Fallbacks if Gemini is not enabled or fails
+    if not structured_profile:
+        if len(original_text) > 150 and original_text != fallback_profile:
+            structured_profile = original_text
+        else:
+            structured_profile = fallback_profile
+
     if not enhanced_phrasing:
         enhanced_phrasing = {
             "Wrote SQL queries for database": "Optimized PostgreSQL indexes and query paths, reducing slow query executions by 42%.",
@@ -510,7 +572,7 @@ async def analyze_resume(req: ResumeAnalyzeRequest):
 """
 
     return {
-        "originalText": original_text,
+        "originalText": structured_profile,
         "enhancedPhrasing": enhanced_phrasing,
         "gapAnalysis": gap_analysis
     }

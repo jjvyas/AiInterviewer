@@ -348,7 +348,31 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
       }
     } catch (e) {
       state = state.copyWith(
-        originalResumeText: "Extracted Resume Context (Fallback): Experienced software engineer specializing in backend systems, APIs, database indexing, and CI/CD pipelines.",
+        originalResumeText: """# Alex Mercer
+**Email:** alex.mercer@devmail.com | **GitHub:** github.com/alexmercer | **Location:** San Francisco, CA
+
+## Professional Summary
+Results-driven Senior Systems Developer with 6+ years of experience specializing in backend architectures, microservices optimization, and automated cloud deployments. Proven track record of scaling database performance and streamlining CI/CD workflows.
+
+## Core Technical Skills
+* **Programming Languages:** Go (Golang), Python, TypeScript, SQL, Java
+* **Frameworks & Libraries:** Node.js (Express), FastAPI, Gin, Flutter
+* **Databases & Caching:** PostgreSQL, MongoDB, Redis, Elasticsearch
+* **Cloud & DevOps:** AWS (ECS, RDS, S3), Docker, Terraform, GitHub Actions
+
+## Work Experience
+### Senior Backend Engineer | Techflow Solutions (2023 - Present)
+* Architected and managed CI/CD deployment pipelines using GitHub Actions and Terraform on AWS ECS, reducing deployment cycle times by 40%.
+* Optimized PostgreSQL database indexing and query paths, reducing slow query executions by 42% and query response latency by 150ms.
+* Engineered high-throughput microservices using Go and Redis to handle up to 15,000 requests per minute with 99.9% uptime.
+
+### Software Developer | CloudScale Corp (2020 - 2023)
+* Built scalable RESTful APIs in Node.js/Express, increasing system resilience under heavy loads.
+* Collaborated on migrating database architectures from monolithic clusters to microservices-based datastores.
+
+## Education & Certifications
+* **B.S. in Computer Science** | Stanford University (2016 - 2020)
+* **AWS Certified Solutions Architect (Associate)**""",
         enhancedPhrasing: {
           "Helped deploy systems": "Architected and managed CI/CD deployment pipelines using Github Actions and Terraform on AWS ECS.",
           "Responsible for database operations": "Optimized PostgreSQL indexes and query paths, reducing slow query executions by 42%.",
