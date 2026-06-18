@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
+
 -- Create login_history table
 CREATE TABLE IF NOT EXISTS public.login_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -109,12 +111,16 @@ CREATE POLICY "Users can update their own interview steps"
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.profiles (id, email, full_name)
-    VALUES (
-        new.id, 
-        new.email, 
-        COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', 'User')
-    );
+    BEGIN
+        INSERT INTO public.profiles (id, email, full_name)
+        VALUES (
+            new.id, 
+            new.email, 
+            COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', 'User')
+        );
+    EXCEPTION WHEN OTHERS THEN
+        RAISE WARNING 'handle_new_user trigger error: %', SQLERRM;
+    END;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
