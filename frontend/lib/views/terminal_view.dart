@@ -30,9 +30,9 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   Widget _buildInterviewerPane(BuildContext context, dynamic state) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.panelBg,
-        border: Border.all(color: AppTheme.textDark, width: 1.5),
-        borderRadius: BorderRadius.circular(12),
+        color: AppTheme.panelBg.withValues(alpha: 0.3),
+        border: Border.all(color: AppTheme.borderColor, width: 1.2),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -42,7 +42,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: AppTheme.textDark, width: 1.5),
+                bottom: BorderSide(color: AppTheme.borderColor, width: 1.2),
               ),
             ),
             child: Row(
@@ -69,21 +69,30 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isLast ? AppTheme.cardBg : Colors.white.withValues(alpha: 0.5),
-                        border: Border.all(color: AppTheme.textDark, width: 1.2),
-                        borderRadius: BorderRadius.circular(8),
+                        color: isLast 
+                            ? AppTheme.accentHighlight.withValues(alpha: 0.1) 
+                            : AppTheme.cardBg.withValues(alpha: 0.3),
+                        border: Border.all(
+                          color: isLast ? AppTheme.accentHighlight : AppTheme.borderColor,
+                          width: 1.2,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             "Question ${index + 1}:",
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold, 
+                              fontSize: 12, 
+                              color: isLast ? AppTheme.accentHighlight : AppTheme.textDark.withValues(alpha: 0.8),
+                            ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 6),
                           Text(
                             step['question'] ?? '',
-                            style: const TextStyle(fontSize: 14),
+                            style: const TextStyle(fontSize: 13.5, height: 1.4),
                           ),
                         ],
                       ),
@@ -98,23 +107,23 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                           padding: const EdgeInsets.all(12),
                           margin: const EdgeInsets.only(left: 32),
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: AppTheme.textDark, width: 1.2),
-                            borderRadius: BorderRadius.circular(8),
+                            color: AppTheme.cardBg.withValues(alpha: 0.25),
+                            border: Border.all(color: AppTheme.borderColor, width: 1.2),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               const Text(
-                                "Your Answer:",
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                "Your Response:",
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
                               ),
                               const SizedBox(height: 4),
-                              Text(step['answer']),
+                              Text(step['answer'], style: const TextStyle(fontSize: 13, height: 1.3)),
                               if (step['score'] != null) ...[
                                 const SizedBox(height: 6),
                                 Text(
-                                  "Completeness: ${(step['score'] * 100).toStringAsFixed(0)}%",
+                                  "Completeness Score: ${(step['score'] * 100).toStringAsFixed(0)}%",
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: AppTheme.accentHighlight,
@@ -141,9 +150,16 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   Widget _buildAnswerPane(BuildContext context, dynamic state, dynamic notifier) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E2E), // Dark terminal bg
-        border: Border.all(color: AppTheme.textDark, width: 1.5),
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF0D0B1F), // Deep space black terminal bg
+        border: Border.all(color: AppTheme.accentHighlight.withValues(alpha: 0.25), width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.accentHighlight.withValues(alpha: 0.05),
+            blurRadius: 15,
+            spreadRadius: 1,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -153,7 +169,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: AppTheme.textDark, width: 1.5),
+                bottom: BorderSide(color: AppTheme.accentHighlight.withValues(alpha: 0.2), width: 1.2),
               ),
             ),
             child: Row(
@@ -163,11 +179,11 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                   children: const [
                     Icon(Icons.code, size: 20, color: Colors.white),
                     SizedBox(width: 8),
-                    Text("Candidate Answer Sandbox", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text("Candidate Answer Sandbox", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                   ],
                 ),
                 const Text(
-                  "Markdown / Text",
+                  "Markdown / Plaintext",
                   style: TextStyle(color: Colors.grey, fontSize: 11),
                 ),
               ],
@@ -190,8 +206,8 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                 ),
                 cursorColor: AppTheme.accentHighlight,
                 decoration: const InputDecoration(
-                  hintText: "// Write your detailed response here. Explain the key concepts, architectural structures, and trade-offs...",
-                  hintStyle: TextStyle(color: Colors.grey, fontFamily: 'Courier'),
+                  hintText: "// Write your response here. Outline the design steps, expected parameters, and engineering trade-offs...",
+                  hintStyle: TextStyle(color: Colors.grey, fontFamily: 'Courier', fontSize: 13),
                   fillColor: Colors.transparent,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -205,10 +221,10 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
-              color: Color(0xFF161622),
+              color: Color(0xFF070512),
               borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(12),
-                bottomRight: Radius.circular(12),
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(16),
               ),
             ),
             child: Row(
@@ -234,13 +250,20 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                           await notifier.submitAnswer(text);
                           _answerController.clear();
                         },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentHighlight,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
                   child: state.isLoading
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
                         )
-                      : const Text("Submit Answer"),
+                      : const Text("Submit Answer", style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),

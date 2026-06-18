@@ -30,6 +30,7 @@ class SetupView extends ConsumerWidget {
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textDark,
+                letterSpacing: -0.5,
               ),
         ),
         const SizedBox(height: 4),
@@ -42,7 +43,7 @@ class SetupView extends ConsumerWidget {
         // Select Domain Title
         const Text(
           "1. Select Engineering Domain Matrix",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         
@@ -54,7 +55,7 @@ class SetupView extends ConsumerWidget {
             crossAxisCount: isNarrow ? 1 : 2,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: isNarrow ? 3.0 : 2.2,
+            childAspectRatio: isNarrow ? 2.8 : 2.2,
           ),
           itemCount: domains.length,
           itemBuilder: (context, index) {
@@ -66,24 +67,40 @@ class SetupView extends ConsumerWidget {
 
             return InkWell(
               onTap: () => notifier.setDomain(name),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
+              borderRadius: BorderRadius.circular(16),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.cardBg : Colors.white.withValues(alpha: 0.4),
+                  color: isSelected 
+                      ? AppTheme.accentHighlight.withValues(alpha: 0.1) 
+                      : AppTheme.cardBg.withValues(alpha: 0.3),
                   border: Border.all(
-                    color: AppTheme.textDark,
-                    width: isSelected ? 2.5 : 1.2,
+                    color: isSelected ? AppTheme.accentHighlight : AppTheme.borderColor,
+                    width: isSelected ? 2.0 : 1.2,
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: isSelected ? [
+                    BoxShadow(
+                      color: AppTheme.accentHighlight.withValues(alpha: 0.2),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                    )
+                  ] : null,
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      icon,
-                      size: 32,
-                      color: isSelected ? AppTheme.accentHighlight : AppTheme.textDark.withValues(alpha: 0.6),
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: isSelected 
+                          ? AppTheme.accentHighlight.withValues(alpha: 0.15) 
+                          : AppTheme.panelBg.withValues(alpha: 0.5),
+                      child: Icon(
+                        icon,
+                        size: 20,
+                        color: isSelected ? AppTheme.accentHighlight : AppTheme.textDark.withValues(alpha: 0.6),
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -93,7 +110,7 @@ class SetupView extends ConsumerWidget {
                           Text(
                             name,
                             style: const TextStyle(
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -102,7 +119,8 @@ class SetupView extends ConsumerWidget {
                             desc,
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.textDark.withValues(alpha: 0.8),
+                              color: AppTheme.textDark.withValues(alpha: 0.6),
+                              height: 1.3,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -116,12 +134,12 @@ class SetupView extends ConsumerWidget {
             );
           },
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         
         // Select Experience Tier Title
         const Text(
           "2. Choose Experience Tier",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         
@@ -136,15 +154,18 @@ class SetupView extends ConsumerWidget {
                 tier,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : AppTheme.textDark,
+                  color: isSelected ? Colors.black : AppTheme.textDark.withValues(alpha: 0.7),
                 ),
               ),
               selected: isSelected,
               selectedColor: AppTheme.accentHighlight,
-              backgroundColor: AppTheme.panelBg.withValues(alpha: 0.5),
+              backgroundColor: AppTheme.cardBg.withValues(alpha: 0.3),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: AppTheme.textDark, width: 1.2),
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: isSelected ? AppTheme.accentHighlight : AppTheme.borderColor,
+                  width: 1.0,
+                ),
               ),
               onSelected: (_) => notifier.setExperienceTier(tier),
             );
@@ -153,18 +174,37 @@ class SetupView extends ConsumerWidget {
         const SizedBox(height: 40),
 
         // Launch Action Button
-        SizedBox(
-          width: double.infinity,
-          height: 54,
-          child: ElevatedButton(
-            onPressed: state.isLoading
-                ? null
-                : () async {
-                    await notifier.startInterview();
-                  },
-            child: state.isLoading
-                ? const CircularProgressIndicator(color: Colors.white)
-                : const Text("Launch Mock Interview Session"),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.accentHighlight.withValues(alpha: 0.3),
+                blurRadius: 15,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton(
+              onPressed: state.isLoading
+                  ? null
+                  : () async {
+                      await notifier.startInterview();
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentHighlight,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: state.isLoading
+                  ? const CircularProgressIndicator(color: Colors.black)
+                  : const Text("Launch Mock Interview Session", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
           ),
         ),
       ],

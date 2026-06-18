@@ -96,12 +96,12 @@ class MainShellLayout extends ConsumerWidget {
           gradient: state.isDarkMode
               ? const RadialGradient(
                   center: Alignment.center,
-                  radius: 1.1,
+                  radius: 1.2,
                   colors: [
-                    Color(0xFF2E1065), // Glow purple light in the middle
-                    Color(0xFF060608), // Deep dark space background edge
+                    Color(0xFF140D36), // Vibrant deep indigo center glow
+                    Color(0xFF04040A), // Extremely dark charcoal space edge
                   ],
-                  stops: [0.0, 0.85],
+                  stops: [0.0, 0.9],
                 )
               : null,
         ),

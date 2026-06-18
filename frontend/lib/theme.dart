@@ -6,24 +6,24 @@ class AppTheme {
   static bool isDarkState = true;
 
   // Dark Mode Palette Colors (Glassmorphic semi-translucent)
-  static const Color darkCanvas = Color(0xFF09090C); // Deep space dark canvas
-  static const Color darkPanel = Color(0x6616161A);  // Translucent panel (40% opacity)
-  static const Color darkCard = Color(0x4D222228);   // Translucent card (30% opacity)
+  static const Color darkCanvas = Color(0xFF07051A); // Deep indigo canvas
+  static const Color darkPanel = Color(0x260F0D25);  // Translucent panel (15% opacity space navy)
+  static const Color darkCard = Color(0x3D1A163B);   // Translucent card (24% opacity frosted indigo)
   static const Color darkText = Color(0xFFF1F5F9);
-  static const Color darkTextMuted = Color(0xFF8F909A);
-  static const Color darkTealAccent = Color(0xFF00ADB5);
-  static const Color darkGoldAccent = Color(0xFFE2B659);
-  static const Color darkBorder = Color(0x1AFFFFFF);  // Low opacity white border (10%)
+  static const Color darkTextMuted = Color(0xFF9EA0B6);
+  static const Color darkTealAccent = Color(0xFF00F0FF); // Electric Blue accent
+  static const Color darkGoldAccent = Color(0xFFBD00FF); // Neon Purple accent
+  static const Color darkBorder = Color(0x2B00F0FF);  // Translucent electric blue border (17% opacity)
 
   // Light Mode Palette Colors (Glassmorphic semi-translucent)
-  static const Color lightCanvas = Color(0xFFF1F5F9);
-  static const Color lightPanel = Color(0x99EBF0F6);  // Translucent light panel (60% opacity)
-  static const Color lightCard = Color(0xCCFFFFFF);   // Translucent light card (80% opacity)
-  static const Color lightText = Color(0xFF1E1E24);
-  static const Color lightTextMuted = Color(0xFF6C757D);
-  static const Color lightTealAccent = Color(0xFF008080);
-  static const Color lightGoldAccent = Color(0xFFB8860B);
-  static const Color lightBorder = Color(0x1A000000);  // Low opacity black border (10%)
+  static const Color lightCanvas = Color(0xFFF8FAFC);
+  static const Color lightPanel = Color(0x7CE2E8F0);  // Translucent light panel
+  static const Color lightCard = Color(0xCCFFFFFF);   // Translucent white card
+  static const Color lightText = Color(0xFF0F172A);
+  static const Color lightTextMuted = Color(0xFF64748B);
+  static const Color lightTealAccent = Color(0xFF0052FF); // Premium corporate blue
+  static const Color lightGoldAccent = Color(0xFF8B00FF); // Purple accent
+  static const Color lightBorder = Color(0x1A0052FF);  // Low opacity blue border
 
   // Dynamic getters to resolve theme colors for views
   static Color get canvasBg => isDarkState ? darkCanvas : lightCanvas;
@@ -57,23 +57,23 @@ class AppTheme {
         color: darkCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: darkBorder, width: 1.0),
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: darkBorder, width: 1.2),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: darkPanel.withValues(alpha: 0.5),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: darkBorder, width: 1.0),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: darkBorder, width: 1.0),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: darkTealAccent, width: 1.5),
         ),
         labelStyle: const TextStyle(color: darkTextMuted),
@@ -82,11 +82,11 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: darkTealAccent,
-          foregroundColor: Colors.white,
+          foregroundColor: Colors.black, // Dark text on bright electric blue looks extremely sharp
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: darkBorder, width: 1.0),
           ),
           textStyle: const TextStyle(
@@ -129,23 +129,23 @@ class AppTheme {
         color: lightCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: lightBorder, width: 1.0),
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: lightBorder, width: 1.2),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white.withValues(alpha: 0.5),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: lightBorder, width: 1.0),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: lightBorder, width: 1.0),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: lightTealAccent, width: 1.5),
         ),
         labelStyle: const TextStyle(color: lightTextMuted),
@@ -158,7 +158,7 @@ class AppTheme {
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: lightBorder, width: 1.0),
           ),
           textStyle: const TextStyle(
