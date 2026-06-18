@@ -408,9 +408,11 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
     } catch (e) {
       // Client-side fallback mapping for offline demonstration
       final updatedHistory = List<Map<String, dynamic>>.from(state.stepsHistory);
+      final localScore = _evaluateAnswerOffline(answer, state.currentQuestion ?? '', state.domain);
+      
       if (updatedHistory.isNotEmpty) {
         updatedHistory.last['answer'] = answer;
-        updatedHistory.last['score'] = 0.8;
+        updatedHistory.last['score'] = localScore;
       }
 
       if (state.currentStep < 5) {
@@ -432,38 +434,53 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
         );
         startTimer();
       } else {
-        // Mock Evaluation Report
+        // Calculate overall score dynamically based on step scores
+        double sumScores = 0.0;
+        int count = 0;
+        for (var step in updatedHistory) {
+          if (step['score'] != null) {
+            sumScores += step['score'] as double;
+            count++;
+          }
+        }
+        final calculatedOverallScore = count > 0 ? (sumScores / count * 100).toInt() : 50;
+
+        // Dynamic Evaluation Report
         final mockReport = """# Performance Evaluation Report
 
 ## 1. Executive Summary
-**Overall Score:** `82 / 100`
-**Domain Performance Rank:** Mid-Level Backend Developer
+**Overall Score:** `$calculatedOverallScore / 100`
+**Domain Performance Rank:** ${state.experienceTier} ${state.domain} Developer
 
 **Key Strengths:**
-- Clear explanation of database indices.
-- Good knowledge of caching paradigms.
+- Demonstrates technical terminology mapping.
+- Good conceptual coverage of topics.
 
 ## 2. Question-by-Question Breakdown
-| # | Question Prompt | Candidate Response Analysis | Score (1-10) |
-|---|-----------------|-----------------------------|--------------|
-| 1 | B-Tree vs Hash index | Good distinction on sorting capability. | 8/10 |
-| 2 | N+1 Query Problem | Identified batch loaders correctly. | 9/10 |
-| 3 | Event Loop | Described microtasks accurately. | 8/10 |
-| 4 | Caching Strategies | Understood cache-aside pattern. | 7/10 |
-| 5 | Behavioral outage | Addressed logging and recovery. | 9/10 |
+| # | Question Prompt | Score (1-10) |
+|---|-----------------|--------------|
+${updatedHistory.asMap().entries.map((entry) {
+  final idx = entry.key + 1;
+  final step = entry.value;
+  final stepScore = (((step['score'] ?? 0.5) as double) * 10).toInt();
+  final qText = step['question'] as String;
+  final displayQ = qText.length > 50 ? "${qText.substring(0, 50)}..." : qText;
+  return "| $idx | $displayQ | $stepScore/10 |";
+}).join('\n')}
 
 ## 3. Domain-Specific Feedback Matrix
-- **Conceptual Depth:** Good computer science background.
-- **System Design Thinking:** Solid but could detail load balancing configurations.
+- **Conceptual Depth:** Dynamic assessment based on keyword completeness.
+- **System Design Thinking:** Relies on structural keyword references.
 
 ## 4. Actionable Upskilling Roadmap
-* Review query optimization techniques.
+* Review query optimization and lifecycle details.
+* Practice real-time system design and trade-offs.
 """;
 
         state = state.copyWith(
           stepsHistory: updatedHistory,
           currentStep: 7,
-          overallScore: 82,
+          overallScore: calculatedOverallScore,
           reportMarkdown: mockReport,
           currentView: 'evaluation',
           isLoading: false,
@@ -526,6 +543,54 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
 
   void toggleTheme() {
     state = state.copyWith(isDarkMode: !state.isDarkMode);
+  }
+
+  double _evaluateAnswerOffline(String answer, String question, String domain) {
+    if (answer.trim().length < 5) return 0.0;
+    final ansLower = answer.toLowerCase();
+    
+    // Basic negative/empty response check
+    if (ansLower.contains("don't know") || 
+        ansLower.contains("don't have") || 
+        ansLower.contains("no idea") || 
+        ansLower.contains("skip") ||
+        ansLower.trim() == "idk" ||
+        ansLower.split(' ').length < 4) {
+      return 0.1; // Very low score
+    }
+
+    // Basic keyword mapping
+    final Map<String, List<String>> domainKeywords = {
+      'Frontend': ['virtual dom', 'lifecycle', 'hook', 'redux', 'context', 'rendering', 'lazy', 'performance'],
+      'Backend': ['rest', 'graphql', 'sql', 'index', 'concurrency', 'event loop', 'cache', 'database'],
+      'Full-Stack': ['auth', 'jwt', 'session', 'database', 'frontend', 'backend', 'api', 'state'],
+      'DevOps': ['ci/cd', 'docker', 'kubernetes', 'terraform', 'prometheus', 'pipeline', 'deployment'],
+    };
+
+    int keywordMatches = 0;
+    final keywords = domainKeywords[domain] ?? [];
+    for (var kw in keywords) {
+      if (ansLower.contains(kw)) {
+        keywordMatches++;
+      }
+    }
+
+    // Also check if any question words (longer than 4 chars) match
+    final qWords = question.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '').split(' ');
+    int qMatches = 0;
+    for (var qw in qWords) {
+      if (qw.length > 4 && ansLower.contains(qw)) {
+        qMatches++;
+      }
+    }
+
+    // Score components
+    double score = 0.1; // baseline
+    if (keywordMatches > 0) score += 0.3 * (keywordMatches > 3 ? 3.0 : keywordMatches);
+    if (qMatches > 1) score += 0.2;
+    if (ansLower.length > 50) score += 0.1; // details credit
+    
+    return score > 1.0 ? 1.0 : score;
   }
 
   // Log client events directly to Express
