@@ -37,7 +37,8 @@ class _LoginViewState extends ConsumerState<LoginView> {
     bool success;
 
     if (_isSignUpMode) {
-      success = await notifier.signUp(email, password);
+      success = await notifier.signUp(email, password, name);
+      if (!mounted) return;
       if (success) {
         // Automatically write full name metadata if supabase synchronizes it
         // Supabase trigger automatically picks up raw metadata
@@ -50,6 +51,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
       }
     } else {
       success = await notifier.login(email, password);
+      if (!mounted) return;
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Welcome back!')),

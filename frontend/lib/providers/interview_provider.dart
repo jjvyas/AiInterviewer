@@ -156,10 +156,14 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
     }
   }
 
-  Future<bool> signUp(String email, String password) async {
+  Future<bool> signUp(String email, String password, String name) async {
     try {
       state = state.copyWith(isLoading: true, errorMessage: null);
-      await sb.Supabase.instance.client.auth.signUp(email: email, password: password);
+      await sb.Supabase.instance.client.auth.signUp(
+        email: email,
+        password: password,
+        data: {'full_name': name},
+      );
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
@@ -518,29 +522,27 @@ ${updatedHistory.asMap().entries.map((entry) {
           .order('created_at', ascending: false);
 
       final List<Map<String, dynamic>> list = [];
-      if (response != null) {
-        for (var item in (response as List)) {
-          final steps = item['interview_steps'] as List?;
-          String? report;
-          if (steps != null) {
-            // Find the evaluation report if it exists
-            final reportStep = steps.firstWhere(
-              (s) => s['step_order'] == 7 || s['dynamic_question'] == 'Evaluation Report',
-              orElse: () => null,
-            );
-            if (reportStep != null) {
-              report = reportStep['user_answer'];
-            }
+      for (var item in response) {
+        final steps = item['interview_steps'] as List?;
+        String? report;
+        if (steps != null) {
+          // Find the evaluation report if it exists
+          final reportStep = steps.firstWhere(
+            (s) => s['step_order'] == 7 || s['dynamic_question'] == 'Evaluation Report',
+            orElse: () => null,
+          );
+          if (reportStep != null) {
+            report = reportStep['user_answer'];
           }
-          list.add({
-            'id': item['id'],
-            'domain': item['domain'],
-            'experience_tier': item['experience_tier'],
-            'overall_score': item['overall_score'] ?? 0,
-            'created_at': item['created_at'],
-            'report': report,
-          });
         }
+        list.add({
+          'id': item['id'],
+          'domain': item['domain'],
+          'experience_tier': item['experience_tier'],
+          'overall_score': item['overall_score'] ?? 0,
+          'created_at': item['created_at'],
+          'report': report,
+        });
       }
       state = state.copyWith(pastInterviews: list);
     } catch (e) {

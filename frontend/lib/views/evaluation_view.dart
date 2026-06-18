@@ -15,13 +15,60 @@ class EvaluationView extends ConsumerWidget {
     final reportMd = state.reportMarkdown ?? """# No report available.
 Please complete a mock interview session first.""";
 
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
+    final isNarrow = MediaQuery.of(context).size.width < 750;
+
+    Widget scoreBadge = Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.accentHighlight,
+        border: Border.all(color: AppTheme.textDark, width: 2),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Header with Overall Score
-          Row(
+          const Text(
+            "OVERALL SCORE",
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            "${state.overallScore}",
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    Widget headerSection = isNarrow
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Interview Evaluation Report",
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textDark,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Detailed technical assessment for ${state.experienceTier} ${state.domain} Mock",
+                style: TextStyle(color: AppTheme.textDark.withValues(alpha: 0.7)),
+              ),
+              const SizedBox(height: 16),
+              scoreBadge,
+            ],
+          )
+        : Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
@@ -41,40 +88,16 @@ Please complete a mock interview session first.""";
                   ),
                 ],
               ),
-              
-              // Score circular badge
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.accentHighlight,
-                  border: Border.all(color: AppTheme.textDark, width: 2),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      "OVERALL SCORE",
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      "${state.overallScore}",
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              scoreBadge,
             ],
-          ),
+          );
+
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          headerSection,
           const SizedBox(height: 24),
 
           // Markdown Content Box
@@ -106,7 +129,7 @@ Please complete a mock interview session first.""";
 
           // Return Action Button
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: isNarrow ? MainAxisAlignment.center : MainAxisAlignment.end,
             children: [
               OutlinedButton(
                 style: OutlinedButton.styleFrom(
