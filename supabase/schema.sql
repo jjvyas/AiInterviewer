@@ -48,41 +48,50 @@ ALTER TABLE public.interview_steps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.login_history ENABLE ROW LEVEL SECURITY;
 
 -- Login History Policies
+DROP POLICY IF EXISTS "Users can insert their own logins" ON public.login_history;
 CREATE POLICY "Users can insert their own logins" 
     ON public.login_history FOR INSERT 
     WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can view their own login history" ON public.login_history;
 CREATE POLICY "Users can view their own login history" 
     ON public.login_history FOR SELECT 
     USING (auth.uid() = user_id);
 
 -- Profiles Policies
+DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
 CREATE POLICY "Users can view their own profile" 
     ON public.profiles FOR SELECT 
     USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 CREATE POLICY "Users can update their own profile" 
     ON public.profiles FOR UPDATE 
     USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
 CREATE POLICY "Users can insert their own profile" 
     ON public.profiles FOR INSERT 
     WITH CHECK (auth.uid() = id);
 
 -- Interviews Policies
+DROP POLICY IF EXISTS "Users can view their own interviews" ON public.interviews;
 CREATE POLICY "Users can view their own interviews" 
     ON public.interviews FOR SELECT 
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own interviews" ON public.interviews;
 CREATE POLICY "Users can insert their own interviews" 
     ON public.interviews FOR INSERT 
     WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own interviews" ON public.interviews;
 CREATE POLICY "Users can update their own interviews" 
     ON public.interviews FOR UPDATE 
     USING (auth.uid() = user_id);
 
 -- Interview Steps Policies
+DROP POLICY IF EXISTS "Users can view their own interview steps" ON public.interview_steps;
 CREATE POLICY "Users can view their own interview steps" 
     ON public.interview_steps FOR SELECT 
     USING (EXISTS (
@@ -91,6 +100,7 @@ CREATE POLICY "Users can view their own interview steps"
           AND public.interviews.user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Users can insert their own interview steps" ON public.interview_steps;
 CREATE POLICY "Users can insert their own interview steps" 
     ON public.interview_steps FOR INSERT 
     WITH CHECK (EXISTS (
@@ -99,6 +109,7 @@ CREATE POLICY "Users can insert their own interview steps"
           AND public.interviews.user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Users can update their own interview steps" ON public.interview_steps;
 CREATE POLICY "Users can update their own interview steps" 
     ON public.interview_steps FOR UPDATE 
     USING (EXISTS (
