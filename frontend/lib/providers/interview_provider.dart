@@ -111,21 +111,68 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
 
   void _initAuth() {
     final currentSession = sb.Supabase.instance.client.auth.currentSession;
-    state = state.copyWith(currentUser: currentSession?.user);
-    if (currentSession?.user != null) {
+    final user = currentSession?.user;
+    if (user != null) {
+      final meta = user.userMetadata ?? {};
+      final originalResumeText = meta['resume_text'] as String?;
+      final gapAnalysisReport = meta['gap_analysis'] as String?;
+      final targetJob = meta['target_job'] as String? ?? 'Senior Backend Engineer';
+      Map<String, String> enhanced = {};
+      if (meta['enhanced_phrasing'] != null) {
+        try {
+          (meta['enhanced_phrasing'] as Map).forEach((k, v) {
+            enhanced[k.toString()] = v.toString();
+          });
+        } catch (_) {}
+      }
+
+      state = state.copyWith(
+        currentUser: user,
+        originalResumeText: originalResumeText,
+        gapAnalysisReport: gapAnalysisReport,
+        targetJob: targetJob,
+        enhancedPhrasing: enhanced,
+      );
       loadPastInterviews();
+    } else {
+      state = state.copyWith(currentUser: null);
     }
 
     _authSubscription = sb.Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final session = data.session;
-      state = state.copyWith(
-        currentUser: session?.user,
-        errorMessage: null,
-      );
-      if (session?.user != null) {
+      final u = session?.user;
+      if (u != null) {
+        final meta = u.userMetadata ?? {};
+        final originalResumeText = meta['resume_text'] as String?;
+        final gapAnalysisReport = meta['gap_analysis'] as String?;
+        final targetJob = meta['target_job'] as String? ?? 'Senior Backend Engineer';
+        Map<String, String> enhanced = {};
+        if (meta['enhanced_phrasing'] != null) {
+          try {
+            (meta['enhanced_phrasing'] as Map).forEach((k, v) {
+              enhanced[k.toString()] = v.toString();
+            });
+          } catch (_) {}
+        }
+
+        state = state.copyWith(
+          currentUser: u,
+          originalResumeText: originalResumeText,
+          gapAnalysisReport: gapAnalysisReport,
+          targetJob: targetJob,
+          enhancedPhrasing: enhanced,
+          errorMessage: null,
+        );
         loadPastInterviews();
       } else {
-        state = state.copyWith(pastInterviews: const [], currentView: 'dashboard');
+        state = state.copyWith(
+          currentUser: null,
+          originalResumeText: null,
+          gapAnalysisReport: null,
+          enhancedPhrasing: const {},
+          pastInterviews: const [],
+          currentView: 'dashboard',
+        );
       }
     });
   }
@@ -198,8 +245,23 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
     state = state.copyWith(experienceTier: tier);
   }
 
-  void setTargetJob(String targetJob) {
+  Future<void> setTargetJob(String targetJob) async {
     state = state.copyWith(targetJob: targetJob);
+    try {
+      final user = sb.Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        await sb.Supabase.instance.client.auth.updateUser(
+          sb.UserAttributes(
+            data: {
+              ...user.userMetadata ?? {},
+              'target_job': targetJob,
+            },
+          ),
+        );
+      }
+    } catch (authErr) {
+      debugPrint('Error updating target job in metadata: $authErr');
+    }
   }
 
   // Timer utilities
@@ -258,6 +320,26 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
           gapAnalysisReport: data['gapAnalysis'],
           isLoading: false,
         );
+
+        // Update user metadata in Supabase to persist the resume details
+        try {
+          final user = sb.Supabase.instance.client.auth.currentUser;
+          if (user != null) {
+            await sb.Supabase.instance.client.auth.updateUser(
+              sb.UserAttributes(
+                data: {
+                  ...user.userMetadata ?? {},
+                  'resume_text': state.originalResumeText,
+                  'enhanced_phrasing': state.enhancedPhrasing,
+                  'gap_analysis': state.gapAnalysisReport,
+                  'target_job': state.targetJob,
+                },
+              ),
+            );
+          }
+        } catch (authErr) {
+          debugPrint('Error updating user metadata with resume: $authErr');
+        }
       } else {
         state = state.copyWith(
           isLoading: false,
@@ -279,6 +361,26 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
 """,
         isLoading: false,
       );
+
+      // Save fallback to metadata as well so it persists
+      try {
+        final user = sb.Supabase.instance.client.auth.currentUser;
+        if (user != null) {
+          await sb.Supabase.instance.client.auth.updateUser(
+            sb.UserAttributes(
+              data: {
+                ...user.userMetadata ?? {},
+                'resume_text': state.originalResumeText,
+                'enhanced_phrasing': state.enhancedPhrasing,
+                'gap_analysis': state.gapAnalysisReport,
+                'target_job': state.targetJob,
+              },
+            ),
+          );
+        }
+      } catch (authErr) {
+        debugPrint('Error updating user metadata with fallback resume: $authErr');
+      }
     }
   }
 
