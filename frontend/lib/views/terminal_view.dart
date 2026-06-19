@@ -281,6 +281,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     final isTimerLow = state.timeLeft < 120; // less than 2 mins left
     final isNarrow = MediaQuery.of(context).size.width < 850;
 
+<<<<<<< HEAD
     Widget header = isNarrow
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,6 +336,21 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
             ],
           )
         : Row(
+=======
+    final Color sandboxBg = state.isDarkMode ? const Color(0xFF1E1E2E) : const Color(0xFFF8F9FA);
+    final Color sandboxText = state.isDarkMode ? const Color(0xFFC0CAF5) : const Color(0xFF1E1E24);
+    final Color sandboxHeaderTextColor = state.isDarkMode ? Colors.white : AppTheme.textDark;
+    final Color sandboxBarBg = state.isDarkMode ? const Color(0xFF161622) : const Color(0xFFE9ECEF);
+    final Color sandboxIconColor = state.isDarkMode ? Colors.white : AppTheme.accentHighlight;
+
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header & Timer Status
+          Row(
+>>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
@@ -357,7 +373,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isTimerLow ? Colors.red.shade100 : Colors.white.withValues(alpha: 0.5),
+                  color: isTimerLow ? Colors.red.withValues(alpha: 0.2) : AppTheme.cardBg,
                   border: Border.all(
                     color: isTimerLow ? Colors.red : AppTheme.textDark,
                     width: 1.5,
@@ -390,6 +406,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
             length: 2,
             child: Column(
               children: [
+<<<<<<< HEAD
                 TabBar(
                   labelColor: AppTheme.accentHighlight,
                   unselectedLabelColor: AppTheme.textDark.withValues(alpha: 0.6),
@@ -398,14 +415,242 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                     Tab(icon: Icon(Icons.psychology), text: "AI Dialogue"),
                     Tab(icon: Icon(Icons.code), text: "Answer Sandbox"),
                   ],
+=======
+                // Left Pane: AI Dialogue & Question Stream
+                Expanded(
+                  flex: 1,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppTheme.panelBg,
+                      border: Border.all(color: AppTheme.textDark, width: 1.5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Left Pane Header
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: AppTheme.textDark, width: 1.5),
+                            ),
+                          ),
+                          child: Row(
+                            children: const [
+                              Icon(Icons.psychology, size: 20),
+                              SizedBox(width: 8),
+                              Text("AI Interviewer Dialog", style: TextStyle(fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                        // Question log stream
+                        Expanded(
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: state.stepsHistory.length,
+                            itemBuilder: (context, index) {
+                              final step = state.stepsHistory[index];
+                              final isLast = index == state.stepsHistory.length - 1;
+                              
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Question
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: isLast ? AppTheme.cardBg : AppTheme.panelBg,
+                                      border: Border.all(color: AppTheme.textDark, width: 1.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Question ${index + 1}:",
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textDark),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          step['question'] ?? '',
+                                          style: TextStyle(fontSize: 14, color: AppTheme.textDark.withValues(alpha: 0.9)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  
+                                  // User Answer (if answered)
+                                  if (step['answer'] != null) ...[
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(12),
+                                        margin: const EdgeInsets.only(left: 32),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.cardBg,
+                                          border: Border.all(color: AppTheme.textDark, width: 1.2),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              "Your Answer:",
+                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textDark),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              step['answer'],
+                                              style: TextStyle(color: AppTheme.textDark.withValues(alpha: 0.9)),
+                                            ),
+                                            if (step['score'] != null) ...[
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                "Completeness: ${(step['score'] * 100).toStringAsFixed(0)}%",
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: AppTheme.accentHighlight,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                  ],
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+>>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
                 ),
                 const SizedBox(height: 12),
                 Expanded(
+<<<<<<< HEAD
                   child: TabBarView(
                     children: [
                       _buildInterviewerPane(context, state),
                       _buildAnswerPane(context, state, notifier),
                     ],
+=======
+                  flex: 1,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: sandboxBg,
+                      border: Border.all(color: AppTheme.textDark, width: 1.5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Sandbox Header
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: AppTheme.textDark, width: 1.5),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.code, size: 20, color: sandboxIconColor),
+                                  const SizedBox(width: 8),
+                                  Text("Candidate Answer Sandbox", style: TextStyle(color: sandboxHeaderTextColor, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              const Text(
+                                "Markdown / Text",
+                                style: TextStyle(color: Colors.grey, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Text Editor
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: TextField(
+                              controller: _answerController,
+                              maxLines: null,
+                              minLines: 20,
+                              style: TextStyle(
+                                fontFamily: 'Courier',
+                                color: sandboxText,
+                                fontSize: 14,
+                                height: 1.4,
+                              ),
+                              cursorColor: AppTheme.accentHighlight,
+                              decoration: const InputDecoration(
+                                hintText: "// Write your detailed response here. Explain the key concepts, architectural structures, and trade-offs...",
+                                hintStyle: TextStyle(color: Colors.grey, fontFamily: 'Courier'),
+                                fillColor: Colors.transparent,
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                        // Action Buttons Bar
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: sandboxBarBg,
+                            borderRadius: const BorderRadius.only(
+                              bottomLeft: Radius.circular(12),
+                              bottomRight: Radius.circular(12),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  "Pressing Submit completes this step. You cannot go back and edit.",
+                                  style: TextStyle(color: Colors.grey, fontSize: 11),
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: state.isLoading
+                                    ? null
+                                    : () async {
+                                        final text = _answerController.text.trim();
+                                        if (text.isEmpty) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text("Please write an answer before submitting.")),
+                                          );
+                                          return;
+                                        }
+                                        await notifier.submitAnswer(text);
+                                        _answerController.clear();
+                                      },
+                                child: state.isLoading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                      )
+                                    : const Text("Submit Answer"),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+>>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
                   ),
                 ),
               ],

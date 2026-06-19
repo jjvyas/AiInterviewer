@@ -336,6 +336,7 @@ class _ResumeLabsViewState extends ConsumerState<ResumeLabsView> {
 
                   // 2. Phrasing Recommendations & Gap Analysis Side-by-Side
                   if (state.originalResumeText != null) ...[
+<<<<<<< HEAD
                     if (isNarrow) ...[
                       _buildPhrasingSuggestions(context, state),
                       const SizedBox(height: 20),
@@ -352,6 +353,111 @@ class _ResumeLabsViewState extends ConsumerState<ResumeLabsView> {
                           Expanded(
                             flex: 1,
                             child: _buildGapAnalysisReport(context, state),
+=======
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // AI-Enhanced Phrasing Table
+                        Expanded(
+                          flex: 1,
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: AppTheme.cardBg,
+                              border: Border.all(color: AppTheme.textDark, width: 1.5),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "AI-Enhanced Phrasing Suggestions",
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.accentHighlight,
+                                      ),
+                                ),
+                                const SizedBox(height: 16),
+                                ...state.enhancedPhrasing.entries.map((entry) {
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 16),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.panelBg.withValues(alpha: 0.3),
+                                      border: Border.all(color: AppTheme.textDark, width: 1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Original:",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: state.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
+                                          ),
+                                        ),
+                                        Text(entry.key, style: const TextStyle(fontSize: 13)),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          "AI suggestion:",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: AppTheme.accentHighlight,
+                                          ),
+                                        ),
+                                        Text(
+                                          entry.value,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+
+                        // Technical Gap Analysis Report
+                        Expanded(
+                          flex: 1,
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: AppTheme.cardBg,
+                              border: Border.all(color: AppTheme.textDark, width: 1.5),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Technical Gap Analysis Report",
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.accentHighlight,
+                                      ),
+                                ),
+                                const SizedBox(height: 16),
+                                MarkdownBody(
+                                  data: state.gapAnalysisReport ?? '',
+                                  styleSheet: MarkdownStyleSheet(
+                                    h1: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark, height: 1.5),
+                                    h2: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.accentHighlight, height: 1.4),
+                                    p: const TextStyle(fontSize: 13, height: 1.4),
+                                    listBullet: TextStyle(color: AppTheme.accentHighlight),
+                                  ),
+                                ),
+                              ],
+                            ),
+>>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
                           ),
                         ],
                       ),

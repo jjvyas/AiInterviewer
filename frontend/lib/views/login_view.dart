@@ -37,11 +37,14 @@ class _LoginViewState extends ConsumerState<LoginView> {
     bool success;
 
     if (_isSignUpMode) {
+<<<<<<< HEAD
       success = await notifier.signUp(email, password, name);
       if (!mounted) return;
+=======
+      success = await notifier.signUp(email, password, name: name);
+>>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
       if (success) {
-        // Automatically write full name metadata if supabase synchronizes it
-        // Supabase trigger automatically picks up raw metadata
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Registration successful! Please sign in.')),
         );
@@ -53,6 +56,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
       success = await notifier.login(email, password);
       if (!mounted) return;
       if (success) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Welcome back!')),
         );
@@ -90,7 +94,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                     decoration: BoxDecoration(
                       color: AppTheme.panelBg,
                       border: Border.all(
@@ -139,7 +143,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
                               color: AppTheme.textDark.withValues(alpha: 0.6),
                             ),
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 20),
 
                           // Full Name (Sign Up only)
                           if (_isSignUpMode) ...[
@@ -158,7 +162,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 18),
+                            const SizedBox(height: 12),
                           ],
 
                           // Email
@@ -173,15 +177,15 @@ class _LoginViewState extends ConsumerState<LoginView> {
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Please enter your email';
+                                  return 'Please enter your email';
                               }
                               if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                                return 'Please enter a valid email address';
+                                  return 'Please enter a valid email address';
                               }
                               return null;
                             },
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 12),
 
                           // Password
                           TextFormField(
@@ -203,7 +207,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 16),
 
                           // Dynamic error message alert
                           if (state.errorMessage != null) ...[
@@ -214,23 +218,43 @@ class _LoginViewState extends ConsumerState<LoginView> {
                                 border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      state.errorMessage!,
-                                      style: const TextStyle(
-                                        color: Colors.redAccent,
-                                        fontSize: 13,
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          state.errorMessage!,
+                                          style: const TextStyle(
+                                            color: Colors.redAccent,
+                                            fontSize: 13,
+                                          ),
+                                        ),
                                       ),
+                                    ],
+                                  ),
+                                  const Divider(color: Colors.redAccent, height: 16),
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      ref.read(interviewProvider.notifier).enterDemoMode();
+                                    },
+                                    icon: const Icon(Icons.play_arrow, color: Colors.greenAccent, size: 18),
+                                    label: const Text(
+                                      "Bypass Auth: Enter Demo Mode",
+                                      style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                      alignment: Alignment.centerLeft,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
                           ],
 
                           // Submit Button
@@ -253,7 +277,21 @@ class _LoginViewState extends ConsumerState<LoginView> {
                                   : Text(_isSignUpMode ? "Create Account" : "Sign In"),
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 50,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                ref.read(interviewProvider.notifier).enterDemoMode();
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: AppTheme.accentHighlight, width: 1.5),
+                                foregroundColor: AppTheme.textDark,
+                              ),
+                              child: const Text("Enter in Demo / Offline Mode"),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
 
                           // Sign In / Sign Up toggle
                           Row(

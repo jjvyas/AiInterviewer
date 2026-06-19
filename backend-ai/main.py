@@ -63,6 +63,48 @@ if gemini_key:
 else:
     logger.warning("GEMINI_API_KEY not found in environment. Running in offline/rule-based mode.")
 
+
+def _is_valid_key() -> bool:
+    """Return False if the key is obviously a placeholder."""
+    return bool(gemini_key and gemini_key.strip() and gemini_key != "your-gemini-api-key")
+
+
+async def gemini_call(prompt: str, json_mode: bool = False, retries: int = 3):
+    """
+    Wrapper around Gemini generate_content with exponential backoff on 429.
+    Uses gemini-2.0-flash (15 RPM / 1500 RPD free tier — higher than 2.5-flash).
+    Returns the response object, or raises on unrecoverable error.
+    """
+    import asyncio
+    if not gemini_client or not _is_valid_key():
+        raise ValueError("Gemini client not initialised or API key is a placeholder.")
+
+    wait_times = [5, 15, 30]  # seconds to wait between retries
+    model = "gemini-2.0-flash"
+    last_exc = None
+
+    for attempt in range(retries):
+        try:
+            kwargs = {"model": model, "contents": prompt}
+            if json_mode:
+                kwargs["config"] = {"response_mime_type": "application/json"}
+            response = gemini_client.models.generate_content(**kwargs)
+            return response
+        except Exception as exc:
+            err_str = str(exc)
+            is_rate_limit = "429" in err_str or "RESOURCE_EXHAUSTED" in err_str
+            if is_rate_limit and attempt < retries - 1:
+                wait = wait_times[min(attempt, len(wait_times) - 1)]
+                logger.warning(
+                    f"Gemini 429 rate-limit hit (attempt {attempt + 1}/{retries}). "
+                    f"Retrying in {wait}s..."
+                )
+                await asyncio.sleep(wait)
+                last_exc = exc
+            else:
+                raise exc
+    raise last_exc  # exhausted retries
+
 # Pydantic schemas
 class EvaluationRequest(BaseModel):
     interview_id: str
@@ -72,6 +114,8 @@ class EvaluationRequest(BaseModel):
     domain: str
     experience_tier: str
     resume_context: Optional[str] = None
+    current_question: Optional[str] = None
+    steps_history: Optional[list] = None
 
 class ResumeAnalyzeRequest(BaseModel):
     fileContent: Optional[str] = None
@@ -119,9 +163,9 @@ def health():
 async def evaluate(req: EvaluationRequest):
     logger.info(f"Evaluating step {req.step_order} for interview {req.interview_id}")
     
-    # 1. Fetch current question from Supabase or use fallback
-    current_question = ""
-    if supabase:
+    # 1. Fetch current question from request payload, Supabase, or use fallback
+    current_question = req.current_question or ""
+    if not current_question and supabase:
         try:
             res = supabase.table("interview_steps")\
                 .select("dynamic_question")\
@@ -136,17 +180,17 @@ async def evaluate(req: EvaluationRequest):
     if not current_question:
         # Fallback question based on tier/difficulty
         if req.step_order == 6:
-            current_question = BEHAVIORAL_QUESTIONS.get(req.domain, "Tell me about a time you solved a hard technical problem.")
+            current_question = BEHAVIORAL_QUESTIONS.get(req.domain, {}).get(req.experience_tier) or BEHAVIORAL_QUESTIONS.get(req.domain, {}).get("Mid", "Tell me about a time you solved a hard technical problem.")
         else:
-            current_question = FALLBACK_QUESTIONS.get(req.domain, {}).get(req.current_difficulty, "Explain your technical background.")
+            current_question = FALLBACK_QUESTIONS.get(req.domain, {}).get(req.experience_tier, {}).get(req.step_order) or FALLBACK_QUESTIONS.get(req.domain, {}).get("Mid", {}).get(req.step_order, "Explain your technical background.")
 
     # 2. Score the answer (Completeness score C)
-    local_eval = analyze_answer_keywords(req.user_answer, current_question, req.domain)
+    local_eval = analyze_answer_keywords(req.user_answer, current_question, req.domain, req.experience_tier)
     completeness_score = local_eval["completeness"]
     
     # Let Gemini refine the evaluation if enabled
     ai_feedback = ""
-    if gemini_client:
+    if gemini_client and _is_valid_key():
         try:
             prompt = f"""
             You are InterviewerAI, an elite technical interviewer evaluating a candidate's response.
@@ -159,24 +203,23 @@ async def evaluate(req: EvaluationRequest):
             Based on the candidate's response:
             1. Analyze what they answered right, what they missed, and any factual errors.
             2. Compute a completeness score C between 0.0 and 1.0 (with 1.0 being perfect).
-               Use the rubric:
-               C = (Keywords Present + Architecture Mentioned + Trade-offs Explained) / Total Expected Criteria.
+               Tailor your expectations to the candidate's Experience Tier:
+               - For Junior: focus on basic correctness and conceptual accuracy of core concepts. Do not expect advanced architecture or trade-offs.
+               - For Mid: expect conceptual accuracy and some standard best practices.
+               - For Senior/Lead: expect deep architectural understanding, scaling paths, capacity trade-offs, and design compromises.
             
             Format your output strictly as a JSON object with keys:
             "completeness_score" (float, e.g. 0.85),
             "feedback" (string, 2-3 sentences of specific analytical feedback).
             """
-            response = gemini_client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt,
-                config={'response_mime_type': 'application/json'}
-            )
+            response = await gemini_call(prompt, json_mode=True)
             ai_data = json.loads(response.text)
             completeness_score = float(ai_data.get("completeness_score", completeness_score))
             ai_feedback = ai_data.get("feedback", "")
             logger.info(f"Gemini completeness score: {completeness_score}")
         except Exception as e:
-            logger.error(f"Error using Gemini for evaluation: {e}")
+            logger.error(f"Gemini evaluation failed (falling back to rule-based score): {e}")
+            # ai_feedback stays empty — clean fallback, no warning in UI
 
     # 3. Update database with user's answer and completeness score
     if supabase:
@@ -195,13 +238,14 @@ async def evaluate(req: EvaluationRequest):
         next_d = adjust_difficulty(req.current_difficulty, completeness_score)
         next_step_order = req.step_order + 1
         next_question = ""
+        gemini_failed_message = None
 
         # Step 6 is always the behavioral question
         if next_step_order == 6:
-            next_question = BEHAVIORAL_QUESTIONS.get(req.domain, "Tell me about a time you solved a hard technical problem.")
+            next_question = BEHAVIORAL_QUESTIONS.get(req.domain, {}).get(req.experience_tier) or BEHAVIORAL_QUESTIONS.get(req.domain, {}).get("Mid", "Tell me about a time you solved a hard technical problem.")
         else:
             # Generate next technical question
-            if gemini_client:
+            if gemini_client and _is_valid_key():
                 try:
                     resume_context_str = f"The candidate's resume highlights: {req.resume_context}." if req.resume_context else ""
                     prompt = f"""
@@ -215,16 +259,18 @@ async def evaluate(req: EvaluationRequest):
                     
                     Generate exactly one technical question. Do not add intro/outro or wrap in markdown.
                     """
-                    response = gemini_client.models.generate_content(
-                        model='gemini-2.5-flash',
-                        contents=prompt
-                    )
+                    response = await gemini_call(prompt)
                     next_question = response.text.strip()
                 except Exception as e:
-                    logger.error(f"Error generating question via Gemini: {e}")
+                    logger.error(f"Gemini question generation failed (using fallback): {e}")
+                    # next_question stays empty — will use clean fallback below
 
             if not next_question:
-                next_question = FALLBACK_QUESTIONS.get(req.domain, {}).get(next_d, "Describe a scaling challenge in your architecture.")
+                next_question = (
+                    FALLBACK_QUESTIONS.get(req.domain, {}).get(req.experience_tier, {}).get(next_step_order)
+                    or FALLBACK_QUESTIONS.get(req.domain, {}).get("Mid", {}).get(next_step_order)
+                    or "Describe a scaling challenge you encountered in your architecture."
+                )
 
         # Save next step to Supabase
         if supabase:
@@ -265,7 +311,32 @@ async def evaluate(req: EvaluationRequest):
         # Generate comprehensive performance report
         logger.info("Compiling final evaluation report...")
         steps_data = []
-        if supabase:
+        
+        # Load steps from client-supplied history payload (crucial for offline/bypassed database setups)
+        if req.steps_history:
+            try:
+                for idx, step in enumerate(req.steps_history):
+                    ans = step.get("answer")
+                    score = step.get("score")
+                    
+                    if idx + 1 == req.step_order:
+                        if not ans:
+                            ans = req.user_answer
+                        if score is None:
+                            score = completeness_score
+                            
+                    steps_data.append({
+                        "step_order": idx + 1,
+                        "dynamic_question": step.get("question") or f"Question {idx + 1}",
+                        "user_answer": ans or "No answer",
+                        "completeness_score": score if score is not None else 0.5
+                    })
+                logger.info(f"Loaded {len(steps_data)} steps from request steps_history.")
+            except Exception as history_err:
+                logger.error(f"Error parsing steps_history payload: {history_err}")
+
+        # Fallback to Supabase query if steps_history wasn't provided or failed to load
+        if not steps_data and supabase:
             try:
                 res = supabase.table("interview_steps")\
                     .select("*")\
@@ -274,7 +345,7 @@ async def evaluate(req: EvaluationRequest):
                     .execute()
                 steps_data = res.data
             except Exception as e:
-                logger.error(f"Error fetching steps data: {e}")
+                logger.error(f"Error fetching steps data from Supabase: {e}")
         
         if not steps_data:
             steps_data = [
@@ -288,7 +359,8 @@ async def evaluate(req: EvaluationRequest):
 
         # Generate report markdown
         report_md = ""
-        if gemini_client:
+        gemini_report_error = None
+        if gemini_client and _is_valid_key():
             try:
                 steps_summary = ""
                 for idx, step in enumerate(steps_data):
@@ -333,20 +405,17 @@ async def evaluate(req: EvaluationRequest):
                 * **Immediate Reading/Practice:** suggestions
                 * **Code Exercises Suggested:** coding tasks
                 """
-                response = gemini_client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=prompt
-                )
+                response = await gemini_call(prompt)
                 report_md = response.text
             except Exception as e:
-                logger.error(f"Error compiling Gemini report: {e}")
+                logger.error(f"Gemini report generation failed (using local fallback): {e}")
 
         if not report_md:
-            # Fallback markdown report
+            # Local fallback markdown report (no warning header — silent fallback)
             rows = []
             for s in steps_data:
                 rows.append(f"| {s['step_order']} | {s['dynamic_question'][:50]}... | Answer analyzed locally. | {int(s.get('completeness_score', 0.5)*10)}/10 |")
-            
+
             report_md = f"""# Performance Evaluation Report
 
 ## 1. Executive Summary
@@ -594,11 +663,21 @@ async def start_interview(payload: dict = Body(...)):
 
     logger.info(f"Starting interview {interview_id} for domain {domain}")
 
-    # Step 1 is generated with difficulty 1 or 2
-    difficulty = 2
+    # Step 1 starting difficulty is based on experience tier
+    if experience_tier == "Junior":
+        difficulty = 1
+    elif experience_tier == "Mid":
+        difficulty = 2
+    elif experience_tier == "Senior":
+        difficulty = 3
+    elif experience_tier == "Lead":
+        difficulty = 4
+    else:
+        difficulty = 2
     question = ""
+    gemini_failed_message = None
 
-    if gemini_client:
+    if gemini_client and _is_valid_key():
         try:
             resume_context_str = f"The candidate's resume highlights: {resume_context}." if resume_context else ""
             prompt = f"""
@@ -612,16 +691,18 @@ async def start_interview(payload: dict = Body(...)):
             
             Generate exactly one technical question. Do not add intro/outro or wrap in markdown.
             """
-            response = gemini_client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt
-            )
+            response = await gemini_call(prompt)
             question = response.text.strip()
         except Exception as e:
-            logger.error(f"Error starting interview question via Gemini: {e}")
+            logger.error(f"Gemini start question failed (using fallback): {e}")
+            # question stays empty — will use clean fallback below
 
     if not question:
-        question = FALLBACK_QUESTIONS.get(domain, {}).get(difficulty, "Explain your technical background.")
+        question = (
+            FALLBACK_QUESTIONS.get(domain, {}).get(experience_tier, {}).get(1)
+            or FALLBACK_QUESTIONS.get(domain, {}).get("Mid", {}).get(1)
+            or "Explain your technical background and key projects."
+        )
 
     # Save to database
     if supabase:
