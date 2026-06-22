@@ -120,37 +120,21 @@ Please complete a mock interview session first.""";
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-<<<<<<< HEAD
                 color: AppTheme.cardBg.withValues(alpha: 0.35),
                 border: Border.all(color: AppTheme.borderColor, width: 1.2),
                 borderRadius: BorderRadius.circular(16),
-=======
-                color: AppTheme.cardBg,
-                border: Border.all(color: AppTheme.textDark, width: 1.5),
-                borderRadius: BorderRadius.circular(12),
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
               ),
               child: Markdown(
                 data: reportMd,
                 styleSheet: MarkdownStyleSheet(
-<<<<<<< HEAD
                   h1: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.accentHighlight, height: 1.6),
                   h2: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.goldAccent, height: 1.5),
                   p: TextStyle(fontSize: 13.5, height: 1.5, color: AppTheme.textDark),
-=======
-                  h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.accentHighlight, height: 1.6),
-                  h2: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark, height: 1.5),
-                  p: TextStyle(fontSize: 14, height: 1.5, color: AppTheme.textDark),
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
                   tableHead: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textDark),
                   tableHeadAlign: TextAlign.center,
                   tableBorder: TableBorder.all(color: AppTheme.borderColor, width: 1),
                   tableCellsPadding: const EdgeInsets.all(8),
-<<<<<<< HEAD
                   tableBody: TextStyle(fontSize: 12.5, color: AppTheme.textDark.withValues(alpha: 0.9)),
-=======
-                  tableBody: TextStyle(fontSize: 13, color: AppTheme.textDark),
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
                   listBullet: TextStyle(color: AppTheme.accentHighlight),
                 ),
               ),

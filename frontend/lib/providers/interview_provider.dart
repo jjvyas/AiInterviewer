@@ -23,10 +23,7 @@ class InterviewState {
   final List<Map<String, dynamic>> pastInterviews;
   final bool isDarkMode;
   final sb.User? currentUser;
-<<<<<<< HEAD
-=======
   final bool isDemoMode;
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
   final int currentDifficulty;
   
   // Resume Labs states
@@ -51,10 +48,7 @@ class InterviewState {
     this.pastInterviews = const [],
     this.isDarkMode = true, // Default to true (sleek dark mode from image)
     this.currentUser,
-<<<<<<< HEAD
-=======
     this.isDemoMode = false,
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
     this.currentDifficulty = 2,
     this.originalResumeText,
     this.enhancedPhrasing = const {},
@@ -78,11 +72,7 @@ class InterviewState {
     List<Map<String, dynamic>>? pastInterviews,
     bool? isDarkMode,
     sb.User? currentUser,
-<<<<<<< HEAD
-    int? currentDifficulty,
-=======
     bool? isDemoMode,
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
     String? originalResumeText,
     Map<String, String>? enhancedPhrasing,
     String? gapAnalysisReport,
@@ -109,15 +99,9 @@ class InterviewState {
       reportMarkdown: clearReportMarkdown ? null : (reportMarkdown ?? this.reportMarkdown),
       pastInterviews: pastInterviews ?? this.pastInterviews,
       isDarkMode: isDarkMode ?? this.isDarkMode,
-<<<<<<< HEAD
-      currentUser: currentUser ?? this.currentUser,
-      currentDifficulty: currentDifficulty ?? this.currentDifficulty,
-      originalResumeText: originalResumeText ?? this.originalResumeText,
-=======
       currentUser: clearCurrentUser ? null : (currentUser ?? this.currentUser),
       isDemoMode: isDemoMode ?? this.isDemoMode,
       originalResumeText: clearOriginalResumeText ? null : (originalResumeText ?? this.originalResumeText),
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
       enhancedPhrasing: enhancedPhrasing ?? this.enhancedPhrasing,
       gapAnalysisReport: clearGapAnalysisReport ? null : (gapAnalysisReport ?? this.gapAnalysisReport),
       targetJob: targetJob ?? this.targetJob,
@@ -310,7 +294,6 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
 
   void _initAuth() {
     final currentSession = sb.Supabase.instance.client.auth.currentSession;
-<<<<<<< HEAD
     final user = currentSession?.user;
     if (user != null) {
       final meta = user.userMetadata ?? {};
@@ -333,20 +316,18 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
         targetJob: targetJob,
         enhancedPhrasing: enhanced,
       );
-=======
-    if (currentSession?.user == null) {
-      state = state.copyWith(clearCurrentUser: true);
-    } else {
-      state = state.copyWith(currentUser: currentSession!.user);
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
       loadPastInterviews();
     } else {
-      state = state.copyWith(currentUser: null);
+      state = state.copyWith(
+        clearCurrentUser: true,
+        clearOriginalResumeText: true,
+        clearGapAnalysisReport: true,
+        enhancedPhrasing: const {},
+      );
     }
 
     _authSubscription = sb.Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final session = data.session;
-<<<<<<< HEAD
       final u = session?.user;
       if (u != null) {
         final meta = u.userMetadata ?? {};
@@ -373,28 +354,14 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
         loadPastInterviews();
       } else {
         state = state.copyWith(
-          currentUser: null,
-          originalResumeText: null,
-          gapAnalysisReport: null,
+          clearCurrentUser: true,
+          clearOriginalResumeText: true,
+          clearGapAnalysisReport: true,
           enhancedPhrasing: const {},
           pastInterviews: const [],
           currentView: 'dashboard',
-        );
-=======
-      if (session?.user == null) {
-        state = state.copyWith(
-          clearCurrentUser: true,
-          errorMessage: null,
-          pastInterviews: const [],
-          currentView: 'dashboard',
-        );
-      } else {
-        state = state.copyWith(
-          currentUser: session!.user,
           errorMessage: null,
         );
-        loadPastInterviews();
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
       }
     });
   }
@@ -428,25 +395,15 @@ class InterviewNotifier extends StateNotifier<InterviewState> {
     }
   }
 
-<<<<<<< HEAD
-  Future<bool> signUp(String email, String password, String name) async {
-=======
   Future<bool> signUp(String email, String password, {String? name}) async {
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
     try {
       state = state.copyWith(isLoading: true, errorMessage: null);
       await sb.Supabase.instance.client.auth.signUp(
         email: email,
         password: password,
-<<<<<<< HEAD
-        data: {'full_name': name},
-      );
-      state = state.copyWith(isLoading: false);
-=======
         data: name != null && name.isNotEmpty ? {'full_name': name} : null,
       );
       state = state.copyWith(isLoading: false, isDemoMode: false);
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
@@ -729,21 +686,13 @@ Results-driven Senior Systems Developer with 6+ years of experience specializing
       );
 
       final question = startRes.data['question'] ?? 'Welcome! Let us start by explaining your engineering background.';
-<<<<<<< HEAD
-      final difficulty = (startRes.data['difficulty'] ?? 2) as int;
-=======
-      final int startDifficulty = startRes.data['difficulty'] ?? offlineDifficulty;
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
+      final int difficulty = (startRes.data['difficulty'] ?? offlineDifficulty) as int;
 
       state = state.copyWith(
         activeInterviewId: interviewId,
         currentStep: 1,
         currentQuestion: question,
-<<<<<<< HEAD
         currentDifficulty: difficulty,
-=======
-        currentDifficulty: startDifficulty,
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
         stepsHistory: [
           {'question': question, 'answer': null, 'score': null}
         ],
@@ -852,11 +801,7 @@ Results-driven Senior Systems Developer with 6+ years of experience specializing
       } else {
         // Prepare next step
         final nextQuestion = data['next_question'] ?? 'Tell me more.';
-<<<<<<< HEAD
-        final nextDifficulty = (data['next_difficulty'] ?? state.currentDifficulty) as int;
-=======
-        final int nextDifficulty = data['next_difficulty'] ?? state.currentDifficulty;
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
+        final int nextDifficulty = (data['next_difficulty'] ?? state.currentDifficulty) as int;
         updatedHistory.add({'question': nextQuestion, 'answer': null, 'score': null});
 
         state = state.copyWith(
@@ -871,100 +816,199 @@ Results-driven Senior Systems Developer with 6+ years of experience specializing
         await _logEvent('STEP_SUBMIT', 'Submitted step ${state.currentStep - 1} answer');
       }
     } catch (e) {
-<<<<<<< HEAD
-      // Client-side fallback mapping for offline demonstration
-      final updatedHistory = List<Map<String, dynamic>>.from(state.stepsHistory);
-      final localScore = _evaluateAnswerOffline(answer, state.currentQuestion ?? '', state.domain);
-      
-      if (updatedHistory.isNotEmpty) {
-        updatedHistory.last['answer'] = answer;
-        updatedHistory.last['score'] = localScore;
-      }
-
-      int nextDifficulty = state.currentDifficulty;
-      if (localScore >= 0.8) {
-        nextDifficulty = (state.currentDifficulty + 1).clamp(1, 5);
-      } else if (localScore <= 0.4) {
-        nextDifficulty = (state.currentDifficulty - 1).clamp(1, 5);
-      }
-
-      if (state.currentStep < 5) {
-        final mockQuestions = [
-          "Explain the N+1 query problem in database ORMs/GraphQL. How do you identify it, and what strategies do you use to resolve it?",
-          "Describe the Node.js event loop. How does it handle concurrency differently compared to multi-threaded engines?",
-          "Compare Cache-aside and Write-through caching strategies. Detail the concurrency challenges.",
-          "Tell me about a production outage or critical database performance bottleneck you encountered."
-        ];
-        
-        final nextQ = mockQuestions[state.currentStep - 1];
-        updatedHistory.add({'question': nextQ, 'answer': null, 'score': null});
-
-        state = state.copyWith(
-          stepsHistory: updatedHistory,
-          currentStep: state.currentStep + 1,
-          currentQuestion: nextQ,
-          currentDifficulty: nextDifficulty,
-          isLoading: false,
-        );
-        startTimer();
-      } else {
-        // Calculate overall score dynamically based on step scores
-        double sumScores = 0.0;
-        int count = 0;
-        for (var step in updatedHistory) {
-          if (step['score'] != null) {
-            sumScores += step['score'] as double;
-            count++;
-          }
-        }
-        final calculatedOverallScore = count > 0 ? (sumScores / count * 100).toInt() : 50;
-
-        // Dynamic Evaluation Report
-        final mockReport = """# Performance Evaluation Report
-
-## 1. Executive Summary
-**Overall Score:** `$calculatedOverallScore / 100`
-**Domain Performance Rank:** ${state.experienceTier} ${state.domain} Developer
-
-**Key Strengths:**
-- Demonstrates technical terminology mapping.
-- Good conceptual coverage of topics.
-
-## 2. Question-by-Question Breakdown
-| # | Question Prompt | Score (1-10) |
-|---|-----------------|--------------|
-${updatedHistory.asMap().entries.map((entry) {
-  final idx = entry.key + 1;
-  final step = entry.value;
-  final stepScore = (((step['score'] ?? 0.5) as double) * 10).toInt();
-  final qText = step['question'] as String;
-  final displayQ = qText.length > 50 ? "${qText.substring(0, 50)}..." : qText;
-  return "| $idx | $displayQ | $stepScore/10 |";
-}).join('\n')}
-
-## 3. Domain-Specific Feedback Matrix
-- **Conceptual Depth:** Dynamic assessment based on keyword completeness.
-- **System Design Thinking:** Relies on structural keyword references.
-
-## 4. Actionable Upskilling Roadmap
-* Review query optimization and lifecycle details.
-* Practice real-time system design and trade-offs.
-""";
-
-        state = state.copyWith(
-          stepsHistory: updatedHistory,
-          currentStep: 7,
-          overallScore: calculatedOverallScore,
-          reportMarkdown: mockReport,
-          currentView: 'evaluation',
-          currentDifficulty: nextDifficulty,
-          isLoading: false,
-        );
-      }
-=======
       debugPrint('Error submitting answer: $e');
       _runOfflineSubmitAnswer(answer);
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
+    }
+  }
+
+  Future<void> endInterviewEarly() async {
+    if (state.activeInterviewId == null) return;
+    
+    stopTimer();
+    state = state.copyWith(isLoading: true, errorMessage: null);
+
+    if (state.isDemoMode) {
+      // Offline fallback for ending early
+      double totalScores = 0.0;
+      int count = 0;
+      final updatedHistory = List<Map<String, dynamic>>.from(state.stepsHistory);
+      for (var step in updatedHistory) {
+        if (step['score'] != null) {
+          totalScores += step['score'] as double;
+          count++;
+        }
+      }
+      final calculatedOverallScore = count > 0 ? (totalScores / count * 100).round() : 0;
+
+      final buffer = StringBuffer();
+      buffer.writeln("# Performance Evaluation Report (Session Ended Early)");
+      buffer.writeln("");
+      buffer.writeln("## 1. Executive Summary");
+      buffer.writeln("**Overall Score:** `$calculatedOverallScore / 100` (Based on $count answered questions)");
+      
+      String rank = "Junior";
+      if (calculatedOverallScore >= 85) {
+        rank = "Senior Developer";
+      } else if (calculatedOverallScore >= 70) {
+        rank = "Mid-Level Engineer";
+      } else {
+        rank = "Junior Developer";
+      }
+      buffer.writeln("**Domain Performance Rank:** $rank");
+      buffer.writeln("");
+      buffer.writeln("*Note: This session was ended early by the candidate.*");
+      buffer.writeln("");
+      buffer.writeln("## 2. Question-by-Question Breakdown");
+      buffer.writeln("| # | Question Prompt | Score (1-10) |");
+      buffer.writeln("|---|-----------------|--------------|");
+      
+      for (int i = 0; i < updatedHistory.length; i++) {
+        final step = updatedHistory[i];
+        if (step['score'] != null) {
+          final qPrompt = step['question'] as String? ?? 'Technical Question';
+          final qShort = qPrompt.length > 55 ? '${qPrompt.substring(0, 52)}...' : qPrompt;
+          final stepScore = step['score'] as double;
+          final scoreOutOf10 = (stepScore * 10).round();
+          buffer.writeln("| ${i + 1} | $qShort | $scoreOutOf10/10 |");
+        }
+      }
+      buffer.writeln("");
+      buffer.writeln("## 3. Domain-Specific Feedback Matrix");
+      buffer.writeln("* **Conceptual Depth:** Needs full session context for detailed mapping.");
+      buffer.writeln("* **System Design & Scaling Thinking:** Only partial answers available.");
+      buffer.writeln("* **Communication & Precision:** Direct, but session was shortened.");
+      buffer.writeln("");
+      buffer.writeln("## 4. Actionable Upskilling Roadmap");
+      buffer.writeln("* **Immediate Reading/Practice:** Focus on completing all session stages.");
+      
+      final mockReport = buffer.toString();
+
+      final newMock = {
+        'id': state.activeInterviewId ?? const Uuid().v4(),
+        'domain': state.domain,
+        'experience_tier': state.experienceTier,
+        'overall_score': calculatedOverallScore,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'report': mockReport,
+      };
+
+      state = state.copyWith(
+        stepsHistory: updatedHistory,
+        currentStep: 7,
+        overallScore: calculatedOverallScore,
+        reportMarkdown: mockReport,
+        currentView: 'evaluation',
+        isLoading: false,
+        pastInterviews: [newMock, ...state.pastInterviews],
+      );
+
+      final userId = state.currentUser?.id ?? 'anonymous';
+      await HiveStorage.saveInterview(userId, newMock);
+      return;
+    }
+
+    try {
+      final response = await _dioAI.post(
+        '/interviews/end',
+        data: {
+          'interview_id': state.activeInterviewId,
+          'domain': state.domain,
+          'experience_tier': state.experienceTier,
+          'steps_history': state.stepsHistory.map((step) {
+            return {
+              'question': step['question'],
+              'answer': step['answer'],
+              'score': step['score'],
+            };
+          }).toList(),
+        },
+      );
+
+      final data = response.data;
+      final scoreVal = (data['overall_score'] ?? 0) as int;
+      final report = data['report'] ?? 'No evaluation report generated.';
+
+      final newMock = {
+        'id': state.activeInterviewId ?? const Uuid().v4(),
+        'domain': state.domain,
+        'experience_tier': state.experienceTier,
+        'overall_score': scoreVal,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'report': report,
+      };
+
+      state = state.copyWith(
+        currentStep: 7,
+        overallScore: scoreVal,
+        reportMarkdown: report,
+        currentView: 'evaluation',
+        isLoading: false,
+        pastInterviews: [newMock, ...state.pastInterviews],
+      );
+
+      final userId = state.currentUser?.id ?? 'anonymous';
+      await HiveStorage.saveInterview(userId, newMock);
+      
+      await _logEvent('INTERVIEW_EARLY_END', 'Ended interview ${state.activeInterviewId} early');
+      loadPastInterviews();
+    } catch (e) {
+      debugPrint('Error ending interview early: $e');
+      // If server fails, fallback to local evaluation calculation to ensure candidate doesn't lose progress
+      double totalScores = 0.0;
+      int count = 0;
+      final updatedHistory = List<Map<String, dynamic>>.from(state.stepsHistory);
+      for (var step in updatedHistory) {
+        if (step['score'] != null) {
+          totalScores += step['score'] as double;
+          count++;
+        }
+      }
+      final calculatedOverallScore = count > 0 ? (totalScores / count * 100).round() : 0;
+      final buffer = StringBuffer();
+      buffer.writeln("# Performance Evaluation Report (Session Ended Early - Offline)");
+      buffer.writeln("");
+      buffer.writeln("## 1. Executive Summary");
+      buffer.writeln("**Overall Score:** `$calculatedOverallScore / 100` (Based on $count answered questions)");
+      buffer.writeln("**Domain Performance Rank:** ${state.experienceTier} ${state.domain} Developer");
+      buffer.writeln("");
+      buffer.writeln("*Note: This session was ended early, and report was compiled locally due to connection error.*");
+      buffer.writeln("");
+      buffer.writeln("## 2. Question-by-Question Breakdown");
+      buffer.writeln("| # | Question Prompt | Score (1-10) |");
+      buffer.writeln("|---|-----------------|--------------|");
+      for (int i = 0; i < updatedHistory.length; i++) {
+        final step = updatedHistory[i];
+        if (step['score'] != null) {
+          final qPrompt = step['question'] as String? ?? 'Technical Question';
+          final qShort = qPrompt.length > 55 ? '${qPrompt.substring(0, 52)}...' : qPrompt;
+          final stepScore = step['score'] as double;
+          final scoreOutOf10 = (stepScore * 10).round();
+          buffer.writeln("| ${i + 1} | $qShort | $scoreOutOf10/10 |");
+        }
+      }
+      final mockReport = buffer.toString();
+
+      final newMock = {
+        'id': state.activeInterviewId ?? const Uuid().v4(),
+        'domain': state.domain,
+        'experience_tier': state.experienceTier,
+        'overall_score': calculatedOverallScore,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'report': mockReport,
+      };
+
+      state = state.copyWith(
+        stepsHistory: updatedHistory,
+        currentStep: 7,
+        overallScore: calculatedOverallScore,
+        reportMarkdown: mockReport,
+        currentView: 'evaluation',
+        isLoading: false,
+        pastInterviews: [newMock, ...state.pastInterviews],
+      );
+
+      final userId = state.currentUser?.id ?? 'anonymous';
+      await HiveStorage.saveInterview(userId, newMock);
     }
   }
 
@@ -1105,19 +1149,10 @@ ${updatedHistory.asMap().entries.map((entry) {
           .eq('user_id', user.id)
           .order('created_at', ascending: false);
 
-<<<<<<< HEAD
-      final List<Map<String, dynamic>> list = [];
-      for (var item in response) {
-        final steps = item['interview_steps'] as List?;
-        String? report;
-        if (steps != null) {
-          // Find the evaluation report if it exists
-=======
       for (var item in (response as List)) {
         final steps = item['interview_steps'] as List?;
         String? report;
         if (steps != null) {
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
           final reportStep = steps.firstWhere(
             (s) => s['step_order'] == 7 || s['dynamic_question'] == 'Evaluation Report',
             orElse: () => null,
@@ -1125,8 +1160,6 @@ ${updatedHistory.asMap().entries.map((entry) {
           if (reportStep != null) {
             report = reportStep['user_answer'];
           }
-<<<<<<< HEAD
-=======
         }
         final record = {
           'id': item['id'],
@@ -1138,16 +1171,7 @@ ${updatedHistory.asMap().entries.map((entry) {
         };
         if (seenIds.add(record['id'].toString())) {
           list.add(record);
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
         }
-        list.add({
-          'id': item['id'],
-          'domain': item['domain'],
-          'experience_tier': item['experience_tier'],
-          'overall_score': item['overall_score'] ?? 0,
-          'created_at': item['created_at'],
-          'report': report,
-        });
       }
     } catch (e) {
       debugPrint('Supabase unavailable, will rely on local disk: $e');
@@ -1196,54 +1220,6 @@ ${updatedHistory.asMap().entries.map((entry) {
     state = state.copyWith(isDarkMode: !state.isDarkMode);
   }
 
-<<<<<<< HEAD
-  double _evaluateAnswerOffline(String answer, String question, String domain) {
-    if (answer.trim().length < 5) return 0.0;
-    final ansLower = answer.toLowerCase();
-    
-    // Basic negative/empty response check
-    if (ansLower.contains("don't know") || 
-        ansLower.contains("don't have") || 
-        ansLower.contains("no idea") || 
-        ansLower.contains("skip") ||
-        ansLower.trim() == "idk" ||
-        ansLower.split(' ').length < 4) {
-      return 0.1; // Very low score
-    }
-
-    // Basic keyword mapping
-    final Map<String, List<String>> domainKeywords = {
-      'Frontend': ['virtual dom', 'lifecycle', 'hook', 'redux', 'context', 'rendering', 'lazy', 'performance'],
-      'Backend': ['rest', 'graphql', 'sql', 'index', 'concurrency', 'event loop', 'cache', 'database'],
-      'Full-Stack': ['auth', 'jwt', 'session', 'database', 'frontend', 'backend', 'api', 'state'],
-      'DevOps': ['ci/cd', 'docker', 'kubernetes', 'terraform', 'prometheus', 'pipeline', 'deployment'],
-    };
-
-    int keywordMatches = 0;
-    final keywords = domainKeywords[domain] ?? [];
-    for (var kw in keywords) {
-      if (ansLower.contains(kw)) {
-        keywordMatches++;
-      }
-    }
-
-    // Also check if any question words (longer than 4 chars) match
-    final qWords = question.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '').split(' ');
-    int qMatches = 0;
-    for (var qw in qWords) {
-      if (qw.length > 4 && ansLower.contains(qw)) {
-        qMatches++;
-      }
-    }
-
-    // Score components
-    double score = 0.1; // baseline
-    if (keywordMatches > 0) score += 0.3 * (keywordMatches > 3 ? 3.0 : keywordMatches);
-    if (qMatches > 1) score += 0.2;
-    if (ansLower.length > 50) score += 0.1; // details credit
-    
-    return score > 1.0 ? 1.0 : score;
-=======
   double _calculateMockScore(String answer, String question) {
     final cleanAns = answer.trim().toLowerCase();
     if (cleanAns.isEmpty) return 0.0;
@@ -1342,7 +1318,6 @@ ${updatedHistory.asMap().entries.map((entry) {
     }
     
     return score.clamp(0.1, 0.98);
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
   }
 
   // Log client events directly to Express

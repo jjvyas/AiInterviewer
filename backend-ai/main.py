@@ -50,60 +50,143 @@ else:
         logger.error(f"Failed to initialize Supabase client: {e}")
         supabase = None
 
-# Initialize Google Gemini Client if key available
+# Initialize Google Gemini / Groq Client if key available
 gemini_key = os.getenv("GEMINI_API_KEY")
 gemini_client = None
-if gemini_key:
-    try:
-        from google import genai
-        gemini_client = genai.Client(api_key=gemini_key)
-        logger.info("Gemini API client initialized successfully using google-genai.")
-    except Exception as e:
-        logger.error(f"Failed to initialize Gemini Client: {e}")
-else:
-    logger.warning("GEMINI_API_KEY not found in environment. Running in offline/rule-based mode.")
+gemini_key_status = "MISSING"
+gemini_key_error = None
+is_groq = False
 
 
 def _is_valid_key() -> bool:
-    """Return False if the key is obviously a placeholder."""
-    return bool(gemini_key and gemini_key.strip() and gemini_key != "your-gemini-api-key")
+    """Return False if the key is obviously a placeholder or invalid."""
+    return bool(gemini_key and gemini_key.strip() and gemini_key != "your-gemini-api-key" and gemini_key_status == "VALID")
+
+
+def validate_gemini_key():
+    global gemini_client, gemini_key_status, gemini_key_error, is_groq
+    if not gemini_key or gemini_key.strip() == "your-gemini-api-key":
+        gemini_key_status = "MISSING"
+        gemini_client = None
+        logger.warning("GEMINI_API_KEY not found in environment. Running in offline/rule-based mode.")
+        return
+
+    if gemini_key.startswith("gsk_"):
+        is_groq = True
+        try:
+            import httpx
+            res = httpx.post(
+                'https://api.groq.com/openai/v1/chat/completions',
+                headers={'Authorization': f'Bearer {gemini_key}'},
+                json={
+                    'model': 'llama-3.3-70b-versatile',
+                    'messages': [{'role': 'user', 'content': 'test'}],
+                    'max_tokens': 1
+                },
+                timeout=10.0
+            )
+            if res.status_code == 200:
+                gemini_key_status = "VALID"
+                logger.info("Groq API key verified and loaded successfully as AI provider.")
+            else:
+                gemini_key_status = "INVALID"
+                gemini_key_error = f"Groq validation failed with status {res.status_code}: {res.text}"
+                logger.error(gemini_key_error)
+        except Exception as e:
+            gemini_key_status = "ERROR"
+            gemini_key_error = f"Failed to validate Groq API key: {e}"
+            logger.error(gemini_key_error)
+        return
+
+    is_groq = False
+    try:
+        from google import genai
+        client = genai.Client(api_key=gemini_key)
+        # Perform a minimal verification call to check for quota/validity
+        client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents='test',
+            config={'max_output_tokens': 1}
+        )
+        gemini_client = client
+        gemini_key_status = "VALID"
+        logger.info("Gemini API client initialized and verified successfully using google-genai.")
+    except Exception as e:
+        gemini_client = None
+        err_str = str(e)
+        if "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
+            gemini_key_status = "QUOTA_EXHAUSTED"
+            gemini_key_error = "The Gemini API key is authenticated but has no free-tier quota (limit: 0 requests/day in your region or project). Please enable billing in Google AI Studio or use a different key."
+        elif "PERMISSION_DENIED" in err_str or "API_KEY_INVALID" in err_str or "not found" in err_str.lower():
+            gemini_key_status = "INVALID"
+            gemini_key_error = "The Gemini API key is invalid, denied, or not supported. Please check your API key."
+        else:
+            gemini_key_status = "ERROR"
+            gemini_key_error = f"Gemini initialization error: {e}"
+        logger.error(f"Failed to initialize Gemini Client: {gemini_key_error}")
+
+
+validate_gemini_key()
+
+
+async def ai_generate_content(prompt: str, json_mode: bool = False, model: str = None) -> str:
+    """Helper to generate content using whichever provider is active (Gemini or Groq)."""
+    if is_groq:
+        import httpx
+        headers = {
+            "Authorization": f"Bearer {gemini_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [{"role": "user", "content": prompt}]
+        }
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            res = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers=headers,
+                json=payload
+            )
+        res.raise_for_status()
+        data = res.json()
+        return data["choices"][0]["message"]["content"].strip()
+    else:
+        if not gemini_client:
+            raise ValueError("Gemini client not initialized")
+        use_model = model or "gemini-2.0-flash"
+        kwargs = {"model": use_model, "contents": prompt}
+        if json_mode:
+            kwargs["config"] = {"response_mime_type": "application/json"}
+        response = gemini_client.models.generate_content(**kwargs)
+        return response.text.strip()
 
 
 async def gemini_call(prompt: str, json_mode: bool = False, retries: int = 3):
     """
-    Wrapper around Gemini generate_content with exponential backoff on 429.
-    Uses gemini-2.0-flash (15 RPM / 1500 RPD free tier — higher than 2.5-flash).
-    Returns the response object, or raises on unrecoverable error.
+    Wrapper around AI generation (Gemini or Groq) with retries.
     """
     import asyncio
-    if not gemini_client or not _is_valid_key():
-        raise ValueError("Gemini client not initialised or API key is a placeholder.")
+    if not _is_valid_key():
+        raise ValueError("AI client not initialised or API key is a placeholder/invalid.")
 
-    wait_times = [5, 15, 30]  # seconds to wait between retries
-    model = "gemini-2.0-flash"
     last_exc = None
-
+    wait_times = [2, 5, 10]
     for attempt in range(retries):
         try:
-            kwargs = {"model": model, "contents": prompt}
-            if json_mode:
-                kwargs["config"] = {"response_mime_type": "application/json"}
-            response = gemini_client.models.generate_content(**kwargs)
-            return response
+            content = await ai_generate_content(prompt, json_mode=json_mode)
+            class MockResponse:
+                def __init__(self, text):
+                    self.text = text
+            return MockResponse(content)
         except Exception as exc:
-            err_str = str(exc)
-            is_rate_limit = "429" in err_str or "RESOURCE_EXHAUSTED" in err_str
-            if is_rate_limit and attempt < retries - 1:
-                wait = wait_times[min(attempt, len(wait_times) - 1)]
-                logger.warning(
-                    f"Gemini 429 rate-limit hit (attempt {attempt + 1}/{retries}). "
-                    f"Retrying in {wait}s..."
-                )
+            logger.warning(f"AI generation call failed (attempt {attempt + 1}/{retries}): {exc}")
+            last_exc = exc
+            if attempt < retries - 1:
+                wait = wait_times[attempt]
                 await asyncio.sleep(wait)
-                last_exc = exc
-            else:
-                raise exc
-    raise last_exc  # exhausted retries
+    raise last_exc
 
 # Pydantic schemas
 class EvaluationRequest(BaseModel):
@@ -116,6 +199,12 @@ class EvaluationRequest(BaseModel):
     resume_context: Optional[str] = None
     current_question: Optional[str] = None
     steps_history: Optional[list] = None
+
+class EndInterviewRequest(BaseModel):
+    interview_id: str
+    domain: str
+    experience_tier: str
+    steps_history: list
 
 class ResumeAnalyzeRequest(BaseModel):
     fileContent: Optional[str] = None
@@ -142,10 +231,57 @@ def extract_text_from_docx(docx_bytes: bytes) -> str:
         from docx import Document
         docx_file = io.BytesIO(docx_bytes)
         doc = Document(docx_file)
-        text = ""
+        
+        # 1. Extract standard paragraphs
+        text_parts = []
         for para in doc.paragraphs:
-            text += para.text + "\n"
-        return text.strip()
+            if para.text.strip():
+                text_parts.append(para.text.strip())
+                
+        # 2. Extract standard tables
+        for table in doc.tables:
+            for row in table.rows:
+                row_text = " ".join(cell.text.strip() for cell in row.cells if cell.text.strip())
+                if row_text.strip():
+                    text_parts.append(row_text.strip())
+                    
+        # 3. Extract text box content via XML traversal (ignoring fallback VML duplicates)
+        try:
+            import xml.etree.ElementTree as ET
+            import zipfile
+            docx_file.seek(0)
+            with zipfile.ZipFile(docx_file) as z:
+                xml_content = z.read('word/document.xml')
+                tree = ET.fromstring(xml_content)
+                namespaces = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+                
+                def traverse_and_extract(node, in_fallback=False):
+                    tag = node.tag
+                    if tag.endswith('}Fallback'):
+                        in_fallback = True
+                        
+                    texts = []
+                    if tag.endswith('}txbxContent') and not in_fallback:
+                        p_texts = []
+                        for p in node.findall('.//w:p', namespaces):
+                            p_text = ''.join(t.text for t in p.findall('.//w:t', namespaces) if t.text)
+                            if p_text.strip():
+                                p_texts.append(p_text.strip())
+                        if p_texts:
+                            texts.append('\n'.join(p_texts))
+                    else:
+                        for child in node:
+                            texts.extend(traverse_and_extract(child, in_fallback))
+                    return texts
+                
+                txbx_texts = traverse_and_extract(tree)
+                for t_box in txbx_texts:
+                    if t_box.strip() and t_box.strip() not in text_parts:
+                        text_parts.append(t_box.strip())
+        except Exception as xml_err:
+            logger.warning(f"Text box XML parser exception: {xml_err}")
+
+        return "\n\n".join(text_parts).strip()
     except Exception as e:
         logger.error(f"python-docx extraction failed: {e}")
         # Fallback ASCII string scraper
@@ -156,6 +292,10 @@ def health():
     return {
         "status": "UP",
         "gemini_enabled": gemini_client is not None,
+        "groq_enabled": is_groq,
+        "ai_provider": "Groq" if is_groq else ("Gemini" if gemini_client is not None else None),
+        "gemini_key_status": gemini_key_status,
+        "gemini_key_error": gemini_key_error,
         "supabase_enabled": supabase is not None
     }
 
@@ -190,7 +330,7 @@ async def evaluate(req: EvaluationRequest):
     
     # Let Gemini refine the evaluation if enabled
     ai_feedback = ""
-    if gemini_client and _is_valid_key():
+    if _is_valid_key():
         try:
             prompt = f"""
             You are InterviewerAI, an elite technical interviewer evaluating a candidate's response.
@@ -245,8 +385,37 @@ async def evaluate(req: EvaluationRequest):
             next_question = BEHAVIORAL_QUESTIONS.get(req.domain, {}).get(req.experience_tier) or BEHAVIORAL_QUESTIONS.get(req.domain, {}).get("Mid", "Tell me about a time you solved a hard technical problem.")
         else:
             # Generate next technical question
-            if gemini_client and _is_valid_key():
+            if _is_valid_key():
                 try:
+                    # Collect previously asked questions to avoid duplication
+                    previous_questions = []
+                    if supabase:
+                        try:
+                            res = supabase.table("interview_steps")\
+                                .select("dynamic_question")\
+                                .eq("interview_id", req.interview_id)\
+                                .order("step_order")\
+                                .execute()
+                            if res.data:
+                                previous_questions = [r["dynamic_question"] for r in res.data if r.get("dynamic_question")]
+                        except Exception as e:
+                            logger.error(f"Error fetching previous questions from Supabase: {e}")
+                    
+                    if req.steps_history:
+                        for step in req.steps_history:
+                            q = step.get("question")
+                            if q and q not in previous_questions:
+                                previous_questions.append(q)
+                                
+                    if req.current_question and req.current_question not in previous_questions:
+                        previous_questions.append(req.current_question)
+
+                    history_str = ""
+                    if previous_questions:
+                        history_str = "\nPreviously asked questions (DO NOT repeat or ask anything similar to these):\n"
+                        for idx, q in enumerate(previous_questions):
+                            history_str += f"{idx + 1}. {q}\n"
+
                     resume_context_str = f"The candidate's resume highlights: {req.resume_context}." if req.resume_context else ""
                     prompt = f"""
                     You are InterviewerAI, an elite technical interviewer.
@@ -256,8 +425,12 @@ async def evaluate(req: EvaluationRequest):
                     Experience Tier: {req.experience_tier}
                     Target Difficulty: {next_d} (on a scale 1-5 where 1 is conceptual basic, 5 is senior architectural scenario/optimization).
                     {resume_context_str}
+                    {history_str}
                     
-                    Generate exactly one technical question. Do not add intro/outro or wrap in markdown.
+                    CRITICAL REQUIREMENT:
+                    - The new question MUST be completely different from any of the previously asked questions listed above.
+                    - Do not repeat topics or ask similar/duplicate questions.
+                    - Generate exactly one technical question. Do not add intro/outro or wrap in markdown.
                     """
                     response = await gemini_call(prompt)
                     next_question = response.text.strip()
@@ -360,7 +533,7 @@ async def evaluate(req: EvaluationRequest):
         # Generate report markdown
         report_md = ""
         gemini_report_error = None
-        if gemini_client and _is_valid_key():
+        if _is_valid_key():
             try:
                 steps_summary = ""
                 for idx, step in enumerate(steps_data):
@@ -537,7 +710,7 @@ Results-driven Senior Systems Developer with 6+ years of experience specializing
     gap_analysis = ""
     structured_profile = ""
 
-    if gemini_client:
+    if _is_valid_key():
         try:
             # 1. Generate structured markdown profile
             profile_prompt = f"""
@@ -556,13 +729,13 @@ Results-driven Senior Systems Developer with 6+ years of experience specializing
             
             Return only the markdown content. Do not include markdown code block backticks (like ```markdown ... ```).
             """
-            profile_res = gemini_client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=profile_prompt
+            profile_res = await ai_generate_content(
+                prompt=profile_prompt,
+                model='gemini-2.5-flash'
             )
-            structured_profile = profile_res.text.strip()
+            structured_profile = profile_res
         except Exception as e:
-            logger.error(f"Error parsing structured profile via Gemini: {e}")
+            logger.error(f"Error parsing structured profile via AI: {e}")
 
         try:
             # 2. Generate enhanced phrasing suggestions
@@ -582,14 +755,14 @@ Results-driven Senior Systems Developer with 6+ years of experience specializing
               "Worked on the Node.js API": "Engineered a high-throughput Node.js microservice cluster, improving request latency by 35% through connection pooling."
             }}
             """
-            phrasing_res = gemini_client.models.generate_content(
+            phrasing_res = await ai_generate_content(
+                prompt=phrasing_prompt,
                 model='gemini-2.5-flash',
-                contents=phrasing_prompt,
-                config={'response_mime_type': 'application/json'}
+                json_mode=True
             )
-            enhanced_phrasing = json.loads(phrasing_res.text)
+            enhanced_phrasing = json.loads(phrasing_res)
         except Exception as e:
-            logger.error(f"Error parsing phrasing suggestions via Gemini: {e}")
+            logger.error(f"Error parsing phrasing suggestions via AI: {e}")
 
         try:
             # 3. Technical Gap Analysis Report
@@ -606,13 +779,13 @@ Results-driven Senior Systems Developer with 6+ years of experience specializing
             
             Format as clean markdown.
             """
-            gap_res = gemini_client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=gap_prompt
+            gap_res = await ai_generate_content(
+                prompt=gap_prompt,
+                model='gemini-2.5-flash'
             )
-            gap_analysis = gap_res.text
+            gap_analysis = gap_res
         except Exception as e:
-            logger.error(f"Error parsing gap analysis via Gemini: {e}")
+            logger.error(f"Error parsing gap analysis via AI: {e}")
 
     # Fallbacks if Gemini is not enabled or fails
     if not structured_profile:
@@ -650,6 +823,177 @@ Results-driven Senior Systems Developer with 6+ years of experience specializing
         "gapAnalysis": gap_analysis
     }
 
+# End Interview Session early
+@app.post("/api/interviews/end")
+async def end_interview_early(req: EndInterviewRequest):
+    logger.info(f"Ending interview early for {req.interview_id}")
+    
+    steps_data = []
+    for idx, step in enumerate(req.steps_history):
+        ans = step.get("answer")
+        score = step.get("score")
+        if ans and score is not None:
+            steps_data.append({
+                "step_order": idx + 1,
+                "dynamic_question": step.get("question") or f"Question {idx + 1}",
+                "user_answer": ans,
+                "completeness_score": score
+            })
+            
+    # Fallback to Supabase query if steps_history was not provided or failed to load
+    if not steps_data and supabase:
+        try:
+            res = supabase.table("interview_steps")\
+                .select("*")\
+                .eq("interview_id", req.interview_id)\
+                .order("step_order")\
+                .execute()
+            if res.data:
+                for row in res.data:
+                    ans = row.get("user_answer")
+                    score = row.get("completeness_score")
+                    if ans and score is not None:
+                        steps_data.append({
+                            "step_order": row.get("step_order"),
+                            "dynamic_question": row.get("dynamic_question") or f"Question {row.get('step_order')}",
+                            "user_answer": ans,
+                            "completeness_score": float(score)
+                        })
+        except Exception as e:
+            logger.error(f"Error fetching steps data from Supabase in end_interview_early: {e}")
+            
+    if not steps_data:
+        overall_score = 0
+        report_md = """# Performance Evaluation Report (Session Ended Early)
+        
+## Executive Summary
+The candidate ended the mock interview session before submitting any answers. No evaluation could be performed.
+"""
+    else:
+        valid_scores = [s["completeness_score"] for s in steps_data]
+        avg_score = sum(valid_scores) / len(valid_scores) if valid_scores else 0.0
+        overall_score = int(avg_score * 100)
+        
+        report_md = ""
+        if _is_valid_key():
+            try:
+                steps_summary = ""
+                for step in steps_data:
+                    steps_summary += f"\nQuestion {step['step_order']}: {step['dynamic_question']}\nCandidate Answer: {step['user_answer']}\nCompleteness Score: {step['completeness_score']}\n"
+                
+                breakdown_rows = "\n".join([
+                    f"| {s['step_order']} | {s['dynamic_question'][:60]}... | Analysis of what was right and missed. | {int(s['completeness_score']*10)}/10 |" 
+                    for s in steps_data
+                ])
+                
+                prompt = f"""
+                You are InterviewerAI, an elite technical interviewer.
+                The candidate ended the mock interview session early after completing {len(steps_data)} questions.
+                Compile a structured markdown evaluation report for this partially completed mock interview.
+                Acknowledge that the session was ended early by the user.
+                
+                Domain: {req.domain}
+                Experience Tier: {req.experience_tier}
+                Overall Score based on completed questions: {overall_score}
+                
+                Completed Steps details:
+                {steps_summary}
+                
+                Output EXACTLY in this format:
+                
+                # Performance Evaluation Report (Session Ended Early)
+                
+                ## 1. Executive Summary
+                **Overall Score:** `{overall_score} / 100` (Based on {len(steps_data)} answered questions)
+                **Domain Performance Rank:** {req.experience_tier} {req.domain} Developer
+                
+                *Note: This session was ended early by the candidate.*
+                
+                **Key Strengths:**
+                - Strengths based on their answers
+                
+                **Top Areas for Improvement:**
+                - Critical gaps observed in answered questions
+                
+                ## 2. Question-by-Question Breakdown
+                | # | Question Prompt | Candidate Response Analysis | Score (1-10) |
+                |---|-----------------|-----------------------------|--------------|
+                {breakdown_rows}
+                
+                ## 3. Domain-Specific Feedback Matrix
+                * **Conceptual Depth:** feedback
+                * **System Design & Scaling Thinking:** feedback
+                * **Communication & Precision:** feedback
+                
+                ## 4. Actionable Upskilling Roadmap
+                * **Immediate Reading/Practice:** suggestions
+                * **Code Exercises Suggested:** coding tasks
+                """
+                response = await gemini_call(prompt)
+                report_md = response.text
+            except Exception as e:
+                logger.error(f"Gemini early report generation failed: {e}")
+                
+        if not report_md:
+            rows = []
+            for s in steps_data:
+                rows.append(f"| {s['step_order']} | {s['dynamic_question'][:50]}... | Answer analyzed locally. | {int(s['completeness_score']*10)}/10 |")
+            
+            report_md = f"""# Performance Evaluation Report (Session Ended Early)
+
+## 1. Executive Summary
+**Overall Score:** `{overall_score} / 100`
+**Domain Performance Rank:** {req.experience_tier} {req.domain} Engineer
+
+*Note: This session was ended early by the candidate.*
+
+**Key Strengths:**
+- Basic response submitted for evaluation.
+
+**Top Areas for Improvement:**
+- Complete the full 6-step interview to receive a comprehensive analysis.
+
+## 2. Question-by-Question Breakdown
+| # | Question Prompt | Candidate Response Analysis | Score (1-10) |
+|---|-----------------|-----------------------------|--------------|
+{"\n".join(rows)}
+
+## 3. Domain-Specific Feedback Matrix
+* **Conceptual Depth:** Needs full session context for detailed mapping.
+* **System Design & Scaling Thinking:** Only partial answers available.
+* **Communication & Precision:** Direct, but session was shortened.
+
+## 4. Actionable Upskilling Roadmap
+* **Immediate Reading/Practice:** Focus on completing all session stages.
+"""
+
+    if supabase:
+        try:
+            supabase.table("interviews")\
+                .update({
+                    "overall_score": overall_score,
+                    "current_step": 7
+                })\
+                .eq("id", req.interview_id)\
+                .execute()
+                
+            supabase.table("interview_steps")\
+                .insert({
+                    "interview_id": req.interview_id,
+                    "dynamic_question": "Evaluation Report",
+                    "user_answer": report_md,
+                    "step_order": 7
+                })\
+                .execute()
+        except Exception as e:
+            logger.error(f"Error finishing early interview in Supabase: {e}")
+            
+    return {
+        "overall_score": overall_score,
+        "report": report_md
+    }
+
+
 # Start Question Endpoint (Initial Question Generation)
 @app.post("/api/interviews/start")
 async def start_interview(payload: dict = Body(...)):
@@ -677,7 +1021,7 @@ async def start_interview(payload: dict = Body(...)):
     question = ""
     gemini_failed_message = None
 
-    if gemini_client and _is_valid_key():
+    if _is_valid_key():
         try:
             resume_context_str = f"The candidate's resume highlights: {resume_context}." if resume_context else ""
             prompt = f"""

@@ -37,12 +37,8 @@ class _LoginViewState extends ConsumerState<LoginView> {
     bool success;
 
     if (_isSignUpMode) {
-<<<<<<< HEAD
-      success = await notifier.signUp(email, password, name);
-      if (!mounted) return;
-=======
       success = await notifier.signUp(email, password, name: name);
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
+      if (!mounted) return;
       if (success) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

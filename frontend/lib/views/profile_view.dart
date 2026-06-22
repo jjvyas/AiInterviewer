@@ -542,79 +542,10 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
           ),
           const SizedBox(height: 24),
 
-<<<<<<< HEAD
           // Render active tab content
           _activeTab == 0
               ? _buildHistoryTab(state, notifier)
               : _buildResumeTab(state, notifier),
-=======
-          // Historical chronological ledger list
-          Expanded(
-            child: state.pastInterviews.isEmpty
-                ? Center(
-                    child: Text(
-                      "No interviews completed yet.",
-                      style: TextStyle(color: AppTheme.textDark.withValues(alpha: 0.6)),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: state.pastInterviews.length,
-                    itemBuilder: (context, index) {
-                      final mock = state.pastInterviews[index];
-                      final score = mock['overall_score'] as int;
-
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          leading: CircleAvatar(
-                            backgroundColor: AppTheme.accentHighlight,
-                            child: const Icon(Icons.assignment, color: Colors.white),
-                          ),
-                          title: Text(
-                            "${mock['experience_tier']} ${mock['domain']} Mock",
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
-                              Text("Taken on: ${_formatDate(mock['created_at'])}"),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: state.isDarkMode ? AppTheme.cardBg : Colors.white,
-                                  border: Border.all(color: AppTheme.textDark, width: 1.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  "Score: $score%",
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Icon(Icons.chevron_right, color: AppTheme.textDark),
-                            ],
-                          ),
-                          onTap: () {
-                            notifier.viewPastEvaluation(
-                              mock['report'] ?? '# Mock Report',
-                              score,
-                              mock['domain'] ?? 'Backend',
-                              mock['experience_tier'] ?? 'Mid',
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  ),
-          ),
->>>>>>> ea9eb1ee3c87b75accfe4a309b3ceea5caa6f1fc
         ],
       ),
     );
